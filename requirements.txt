@@ -1,0 +1,13 @@
+# Dépendances principales
+pydantic-settings>=2.0.0
+
+# Outils de développement
+pre-commit>=3.5.0
+black>=24.0.0
+isort>=5.13.0
+flake8>=7.0.0
+mypy>=1.8.0
+
+# Tests (optionnel)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
