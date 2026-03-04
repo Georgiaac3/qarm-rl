@@ -114,7 +114,6 @@ Le projet utilise pre-commit pour maintenir la qualité du code. Les hooks confi
 
 - **trailing-whitespace** : Supprime les espaces en fin de ligne
 - **end-of-file-fixer** : Assure une ligne vide en fin de fichier
-- **check-yaml/json/toml** : Valide la syntaxe des fichiers de configuration
 - **black** : Formatage automatique du code Python (ligne max: 100 caractères)
 - **isort** : Tri automatique des imports
 - **flake8** : Vérification de la qualité du code (PEP8)
