@@ -25,7 +25,7 @@ qarm-rl/
 
 ### Prérequis
 
-- Python 3.8 ou supérieur
+- Python 3.8 ou supérieur (idéalement 3.12, plus haut ça risque de faire bigger pyrealsense)
 - MATLAB/Simulink (pour le modèle du robot)
 
 ### Étapes d'installation
@@ -42,6 +42,11 @@ qarm-rl/
    source venv/bin/activate  # Sur macOS/Linux
    # ou
    venv\Scripts\activate     # Sur Windows
+   ```
+   ou avec conda
+   ```bash
+   conda create -n qarmrl python
+   conda activate qarmrl
    ```
 
 3. **Installer les dépendances**

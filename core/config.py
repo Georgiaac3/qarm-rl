@@ -1,8 +1,19 @@
+from enum import Enum
+
 from pydantic_settings import BaseSettings
+
+
+class MODE(Enum):
+    """Enum pour sélectionner le mode de fonctionnement du bras robotique (réel ou simulation)."""
+
+    REAL = "real"
+    SIM = "sim"
 
 
 class Settings(BaseSettings):
     """Configuration de l'application de contrôle du bras robotique QARM."""
+
+    mode: MODE = MODE.REAL
 
     # ========================================================================
     # CONFIGURATION RÉSEAU UDP
@@ -10,7 +21,8 @@ class Settings(BaseSettings):
 
     # Adresse et port de destination (Simulink)
     udp_ip: str = "127.0.0.1"
-    udp_port: int = 5005
+    udp_port_send: int = 5005
+    udp_port_recv: int = 5006
 
     # Adresse locale (Python)
     local_bind_ip: str = "0.0.0.0"
@@ -23,11 +35,11 @@ class Settings(BaseSettings):
     simulation_duration: float = 15.0  # Durée totale de la simulation (secondes)
 
     # ========================================================================
-    # PARAMÈTRES DE CONTRÔLE
+    # PARAMÈTRES DE CAMÉRA
     # ========================================================================
-
-    v_max: float = 0.5  # Vitesse maximale normalisée (0 à 1)
-    kp_gain: float = 2.0  # Gain du contrôleur proportionnel
+    camera_width: int = 640
+    camera_height: int = 480
+    camera_fps: int = 30
 
     # ========================================================================
     # TIMING DES PHASES DE MOUVEMENT
@@ -54,6 +66,7 @@ class Settings(BaseSettings):
     # AUTRES PARAMÈTRES
     # ========================================================================
     expected_data_size = 32  # 4 angles * 8 octets par double
+    log_file: str = "robot_log.csv"  # Fichier de log des données
 
 
 settings = Settings()

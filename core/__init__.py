@@ -5,6 +5,6 @@ Ce package contient les modules de configuration et de logging.
 """
 
 from core.config import settings
-from core.logger import logger
+from utils.logger import logger
 
 __all__ = ["settings", "logger"]
