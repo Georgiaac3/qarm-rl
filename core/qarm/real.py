@@ -46,8 +46,10 @@ class QARMReal(QARMInterface):
                 return struct.unpack("dddd", data)
             logging.warning("Received data of unexpected size: %d bytes", len(data))
         except BlockingIOError:
-            return "BlockingIOError - No data received"
-        return "No data received"  # valeurs par défaut
+            print("No data received")
+        except ConnectionResetError:
+            print("Connection reset by peer")
+        return "Default answer"
 
     # -------------------- Envoi commandes --------------------
     def send_speeds(self, v, grip):

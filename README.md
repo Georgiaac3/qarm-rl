@@ -39,10 +39,10 @@ qarm-rl/
 
 2. **Créer un environnement virtuel** (recommandé)
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # Sur macOS/Linux
+   python -m venv qarmrl
+   source qarmrl/bin/activate  # Sur macOS/Linux
    # ou
-   venv\Scripts\activate     # Sur Windows
+   qarmrl\Scripts\activate     # Sur Windows
    ```
    ou avec conda
    ```bash

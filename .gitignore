@@ -14,6 +14,7 @@ venv/
 env/
 ENV/
 .venv
+qarmrl
 
 # IDE / Éditeurs
 .vscode/
@@ -47,3 +48,7 @@ slprj/
 # Données temporaires
 *.tmp
 *.temp
+
+# Simulink
+BasicIO_pwm_mode_retest.rt-win64
+BasicIO_pwm_mode_retest_quarc_win64/

@@ -1,7 +1,5 @@
 from enum import Enum
-
 from pydantic_settings import BaseSettings
-
 
 class MODE(Enum):
     """Enum pour sélectionner le mode de fonctionnement du bras robotique (réel ou simulation)."""
@@ -65,7 +63,7 @@ class Settings(BaseSettings):
     # ========================================================================
     # AUTRES PARAMÈTRES
     # ========================================================================
-    expected_data_size = 32  # 4 angles * 8 octets par double
+    expected_data_size: int = 32  # 4 angles * 8 octets par double
     log_file: str = "robot_log.csv"  # Fichier de log des données
 
 
