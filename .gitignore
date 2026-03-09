@@ -47,3 +47,6 @@ slprj/
 # Données temporaires
 *.tmp
 *.temp
+
+# Fichiers de notes
+notes.md

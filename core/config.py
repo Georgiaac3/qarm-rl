@@ -68,5 +68,18 @@ class Settings(BaseSettings):
     expected_data_size = 32  # 4 angles * 8 octets par double
     log_file: str = "robot_log.csv"  # Fichier de log des données
 
+    # ========================================================================
+    # SAC HYPERPARAMETERS
+    # ========================================================================
+    lr_pi: float = 0.0005  # Policy learning rate (Actor)
+    lr_q: float = 0.001  # Q-network learning rate (Critic)
+    init_alpha: float = 0.01  # Initial alpha value (temperature)
+    gamma: float = 0.98  # Discount factor
+    batch_size: int = 32  # Mini-batch size
+    buffer_limit: int = 50000  # Maximum replay buffer size
+    tau = 0.01  # Soft update coefficient for target networks
+    target_entropy = -4.0  # Target entropy (-dim for 4D action space)
+    lr_alpha = 0.001  # Learning rate for alpha
+
 
 settings = Settings()
