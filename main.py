@@ -33,7 +33,7 @@ def run_robot(robot: QARMReal):
 
 
     # --- Gains PID différents pour chaque moteur ---
-    # TODO : finetune these... with RL ? or with a simple grid search ? or just intuition ?
+    # TODO : fine-tune these parameters... with RL ? or with a simple grid search ? or just intuition ?
     Kp = np.array([1, 1, 1, 1])   # proportionnel
     Ki = np.array([0, 10, 0, 0])   # intégral
     Kd = np.array([0, 0, 0, 0])  # dérivé
