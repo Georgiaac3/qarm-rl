@@ -44,13 +44,11 @@ class QARMReal(QARMInterface):
             data, _ = self.sock.recvfrom(1024)
             if len(data) == 32:
                 return struct.unpack("dddd", data)
-            logging.warning("Received data of unexpected size: %d bytes", len(data))
+            logging.info("Received data of unexpected size: %d bytes", len(data))
         except BlockingIOError:
-            print("No data received")
+            logging.info("No data received")
         except ConnectionResetError:
-            print("Connection reset by peer")
-        return "Default answer"
-
+            logging.info("Connection reset by peer")
     # -------------------- Envoi commandes --------------------
     def send_speeds(self, v, grip):
         try:
