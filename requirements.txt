@@ -3,6 +3,7 @@ pydantic-settings>=2.0.0
 opencv-python>=4.0.0
 numpy>=2.4.0
 pyrealsense2>=2.2.0
+matplotlib>=3.10.8
 
 # Outils de développement
 pre-commit>=3.5.0

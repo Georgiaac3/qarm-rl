@@ -42,24 +42,30 @@ class QARMReal(QARMInterface):
         self.pipeline.start(config)
 
         # PID position command
+        self.filtered_speeds = None
+        self.last_filtered_accel = None
         self.last_order_time = None
-        self.last_real_speeds = np.zeros(4)
-        self.error_integral = 0.
+        self.last_real_speeds = None
+        self.error_integral = np.zeros(4)
 
         self.limit_speeds_pourcentage = 0.7 # out of 1 for PWM
 
         # TODO : fine-tune these parameters... with RL ? or with a simple grid search ? or just intuition ?
         # les gains contiennent l'inverse du coefficient directeur entre pwm et speed
         # valeurs de gain de Maria : Kp = 12.7, Kd = 204.6 Ki = 0.012,
-        self.Kp = np.array([1, 1, 1, 1])*30/100   # proportionnel
-        self.Kd = np.array([1, 1, 1, 1])*40/100   # dérivé
-        self.Ki = np.array([1, 1, 1, 1])*0/1000   # intégral
+        # self.Kp = np.array([1, 1, 1, 1])*30/100   # proportionnel
+        # self.Kd = np.array([1, 1, 1, 1])*40/100   # dérivé
+        # self.Ki = np.array([1, 1, 1, 1])*0/1000   # intégral
+        self.Kp = np.array([0, 0, 0, 0.6*10/100])  # proportionnel
+        self.Kd = np.array([0, 0, 0, 0.6*10.37/8])  # dérivé
+        self.Ki = np.array([0, 0, 0, 2*0.6*10/100/10.37])  # intégral
         self.Kcomp = 0.
 
 
     # -------------------- Lecture angles --------------------
     def read_angles(self):
         if self.last_packet:
+            print("Angles lus:", self.last_packet[:4])
             return self.last_packet[:4]
         return None
 
@@ -101,6 +107,20 @@ class QARMReal(QARMInterface):
         color_image = np.asanyarray(color_frame.get_data())
         depth_image = np.asanyarray(depth_frame.get_data())
         return color_image, depth_image
+    
+    # -------------------- Connexion --------------------
+    def connect(self):
+        connexion = False
+        while not connexion:
+            self.send_speeds([0.0, -0.1, -0.1, 0.0], 0)
+            self.update_packet()
+            angles = self.read_angles()
+            if angles is not None:
+                print("Connexion établie, angles initiaux:", angles)
+                connexion = True
+            else:
+                print("En attente de connexion...")
+                time.sleep(1)
 
     # -------------------- Fermeture --------------------
     def close(self):
@@ -108,48 +128,102 @@ class QARMReal(QARMInterface):
         cv2.destroyAllWindows()
         self.sock.close()
 
+    # -------------------- Contrôle en position --------------------
+    # def go_to_position_PID(self, target_angles, current_angles, current_speeds):
+    #     """
+    #     the following must be np.array
+    #     target_angles: [angle_base, angle_shoulder, angle_elbow, angle_wrist]
+    #     current_angles:  [angle_base, angle_shoulder, angle_elbow, angle_wrist]
+    #     current_speeds: [speed_base, speed_shoulder, speed_elbow, speed_wrist]
+    #     """
+    #     now = time.time()
+    #     if self.last_order_time is None:
+    #         self.last_order_time = now
+    #         return np.zeros_like(current_angles)
+       
+    #     dt = now - self.last_order_time # custom delta time, not necessarily corresponding to the timestep
+    #     self.last_order_time = now
+
+    #     # 1. Erreur de position
+    #     erreur = target_angles - current_angles
+       
+    #     # 2. Terme P (Proportionnel)
+    #     P = self.Kp * erreur
+       
+    #     # 3. Terme I (Intégral)
+    #     self.error_integral += erreur * dt
+    #     I = self.Ki * self.error_integral
+       
+    #     # 4. Terme D (Dérivé)
+    #     D = -self.Kd * current_speeds
+       
+    #     # 5. Compensation dynamique (Couplage)
+    #     # On regarde comment la vitesse de l'épaule change (accélération)
+    #     acceleration = (current_speeds - self.last_real_speeds) / dt
+    #     geometrical_factor = -np.sin(current_angles[2])
+    #     # On applique un gain de compensation croisé :
+    #     # l'accélération de l'épaule [1] influence la commande du coude [2]
+    #     compensation = np.zeros_like(P)
+    #     compensation[2] = self.Kcomp * geometrical_factor * acceleration[1]
+       
+    #     # 6. Somme et Normalisation
+    #     vitesse_brute = P + I + D + compensation
+    #     order = np.clip(vitesse_brute, -self.limit_speeds_pourcentage, self.limit_speeds_pourcentage)
+       
+    #     # Sauvegarde pour le prochain cycle
+    #     self.last_real_speeds = np.copy(current_speeds)
+
+    #     return order
+
     def go_to_position_PID(self, target_angles, current_angles, current_speeds):
-        """
-        the following must be np.array
-        target_angles: [angle_base, angle_shoulder, angle_elbow, angle_wrist]
-        current_angles:  [angle_base, angle_shoulder, angle_elbow, angle_wrist]
-        current_speeds: [speed_base, speed_shoulder, speed_elbow, speed_wrist]
-        """
         now = time.time()
         if self.last_order_time is None:
             self.last_order_time = now
+            self.filtered_speeds = np.copy(current_speeds)
+            self.last_real_speeds = np.copy(current_speeds)
+            self.last_filtered_accel = np.zeros_like(current_speeds)
             return np.zeros_like(current_angles)
-       
-        dt = now - self.last_order_time # custom delta time, not necessarily corresponding to the timestep
+
+        dt = now - self.last_order_time
         self.last_order_time = now
+
+        # --- FILTRAGE DES VITESSES (Passe-bas) ---
+        # alpha_v proche de 1 = réactif mais bruité / proche de 0 = lisse mais lent
+        alpha_v = 0.2 
+        self.filtered_speeds = (alpha_v * current_speeds) + (1 - alpha_v) * self.filtered_speeds
 
         # 1. Erreur de position
         erreur = target_angles - current_angles
-       
-        # 2. Terme P (Proportionnel)
+        #print(erreur[3], target_angles[3], current_angles[3])
+
+        # 2. Terme P
         P = self.Kp * erreur
-       
-        # 3. Terme I (Intégral)
+
+        # 3. Terme I (On le laisse à 0 pour le moment comme dans tes réglages)
         self.error_integral += erreur * dt
         I = self.Ki * self.error_integral
-       
-        # 4. Terme D (Dérivé)
-        D = -self.Kd * current_speeds
-       
-        # 5. Compensation dynamique (Couplage)
-        # On regarde comment la vitesse de l'épaule change (accélération)
-        acceleration = (current_speeds - self.last_real_speeds) / dt
-        geometrical_factor = -np.sin(current_angles[2])
-        # On applique un gain de compensation croisé :
-        # l'accélération de l'épaule [1] influence la commande du coude [2]
+
+        # 4. Terme D : ON UTILISE LA VITESSE FILTRÉE
+        D = -self.Kd * self.filtered_speeds
+
+        # 5. Compensation (Accélération filtrée)
+        # On calcule l'accélération à partir des vitesses déjà lissées
+        raw_acceleration = (self.filtered_speeds - self.last_real_speeds) / dt
+        alpha_a = 0.1 # Filtre encore plus fort pour l'accélération
+        filtered_accel = (alpha_a * raw_acceleration) + (1 - alpha_a) * self.last_filtered_accel
+        self.last_filtered_accel = np.copy(filtered_accel)
+
+        # Facteur géométrique : vérifie si cos() ne serait pas plus adapté
+        # (Si bras tendu = 0 rad, alors c'est cos)
+        geometrical_factor = -np.sin(current_angles[2]) 
+
         compensation = np.zeros_like(P)
-        compensation[2] = self.Kcomp * geometrical_factor * acceleration[1]
-       
-        # 6. Somme et Normalisation
+        compensation[2] = self.Kcomp * geometrical_factor * filtered_accel[1]
+
+        # 6. Somme et Saturation
         vitesse_brute = P + I + D + compensation
         order = np.clip(vitesse_brute, -self.limit_speeds_pourcentage, self.limit_speeds_pourcentage)
-       
-        # Sauvegarde pour le prochain cycle
-        self.last_real_speeds = np.copy(current_speeds)
-       
-        self.send_speeds(order.tolist(), 1)
+
+        self.last_real_speeds = np.copy(self.filtered_speeds)
+
+        return order
