@@ -21,6 +21,7 @@ def run_robot(robot: QARMReal):
     connexion = False
     while not connexion:
         robot.send_speeds([0.0, -0.1, -0.1, 0.0], 0)
+        robot.update_packet()
         angles = robot.read_angles()
         if angles is not None:
             print("Connexion établie, angles initiaux:", angles)
@@ -29,46 +30,25 @@ def run_robot(robot: QARMReal):
             print("En attente de connexion...")
             time.sleep(0.5)
 
-    positions_cibles = np.array([-3*np.pi/4, 0.1, -np.pi/3, np.pi/2])
+    #target_angles = np.array([-3*np.pi/4, 0.1, -np.pi/3, np.pi/2])
+    target_angles = np.array([0, 0, -np.pi/2, np.pi/3])
 
-
-    # --- Gains PID différents pour chaque moteur ---
-    # TODO : fine-tune these parameters... with RL ? or with a simple grid search ? or just intuition ?
-    Kp = np.array([1, 1, 1, 1])   # proportionnel
-    Ki = np.array([0, 10, 0, 0])   # intégral
-    Kd = np.array([0, 0, 0, 0])  # dérivé
-
-    integrale_erreur = np.zeros(4)
-
-    vitesse_max = 0.2
     while True:
+        robot.update_packet()
         angles = robot.read_angles()
-        print(angles)
-        if angles is None:
+        speeds = robot.read_speeds()
+
+        if angles is None or speeds is None:
             time.sleep(settings.dt)
             continue
-        else:
-            print("Angles reçus:", angles)
-        positions_actuelles = np.array(angles[:4])
-        vitesses_actuelles = np.zeros(4)
 
-        # Calculer l'erreur
-        erreur = positions_cibles - positions_actuelles
+        current_angles = np.array(angles)
+        current_speeds = np.array(speeds)
 
-        # Mise à jour du terme intégral
-        integrale_erreur += erreur * settings.dt
-
-        # Calcul de la commande PID
-        vitesses_commandes = Kp * erreur + Ki * integrale_erreur - Kd * vitesses_actuelles
-
-        # Limiter les vitesses pour chaque moteur
-        vitesses_commandes = np.clip(vitesses_commandes, -vitesse_max, vitesse_max)
-
-        # Envoyer la commande au robot
-        robot.send_speeds(vitesses_commandes.tolist(), 1)
+        robot.go_to_position_PID(target_angles, current_angles, current_speeds)
 
         # Attendre 2 ms
-        time.sleep(settings.dt)
+        time.sleep(settings.timestep)
 
 if __name__ == "__main__":
     qarm = get_qarm_interface()
