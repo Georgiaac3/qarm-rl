@@ -14,6 +14,7 @@ venv/
 env/
 ENV/
 .venv
+qarmrl
 
 # IDE / Éditeurs
 .vscode/
@@ -50,3 +51,8 @@ slprj/
 
 # Fichiers de notes
 notes.md
+
+# Simulink
+BasicIO_pwm_mode_retest.rt-win64
+BasicIO_pwm_mode_retest_quarc_win64/
+BasicIO_pwm_mode_retest.slx.autosave
