@@ -1,3 +1,7 @@
+"""
+Interface commune pour simulation ou robot réel.
+"""
+
 from abc import ABC, abstractmethod
 
 

@@ -2,10 +2,12 @@ import logging
 import socket
 import struct
 import time
+from typing import Tuple
 
 import cv2
 import numpy as np
 import pyrealsense2 as rs
+from numpy.typing import NDArray
 
 from core.config import settings
 from core.qarm.interface import QARMInterface
@@ -20,7 +22,7 @@ class QARMReal(QARMInterface):
         self.sock.bind(("0.0.0.0", settings.udp_port_recv))
         self.sock.setblocking(False)
 
-        self.last_packet = None #(0.0,) * 8 -> 4 first coordonnates for the angles, 4 last coordonnates for speeds
+        self.last_packet = None  # (0.0,) * 8 -> 4 first coordonnates for the angles, 4 last coordonnates for speeds
 
         # Caméra avec RealSense
         self.pipeline = rs.pipeline()
@@ -42,25 +44,17 @@ class QARMReal(QARMInterface):
         self.pipeline.start(config)
 
         # PID position command
-        self.filtered_speeds = None
-        self.last_filtered_accel = None
-        self.last_order_time = None
-        self.last_real_speeds = None
-        self.error_integral = np.zeros(4)
+        # 1. Paramètres Moteurs (SI)
+        self.R = 2.5  # Ohms
+        self.kt = 0.05  # N.m/A
+        self.kv = 0.05  # V.s/rad
+        self.V_alim = 24.0  # Volts
 
-        self.limit_speeds_pourcentage = 0.7 # out of 1 for PWM
-
-        # TODO : fine-tune these parameters... with RL ? or with a simple grid search ? or just intuition ?
-        # les gains contiennent l'inverse du coefficient directeur entre pwm et speed
-        # valeurs de gain de Maria : Kp = 12.7, Kd = 204.6 Ki = 0.012,
-        # self.Kp = np.array([1, 1, 1, 1])*30/100   # proportionnel
-        # self.Kd = np.array([1, 1, 1, 1])*40/100   # dérivé
-        # self.Ki = np.array([1, 1, 1, 1])*0/1000   # intégral
-        self.Kp = np.array([0, 0, 0, 0.6*10/100])  # proportionnel
-        self.Kd = np.array([0, 0, 0, 0.6*10.37/8])  # dérivé
-        self.Ki = np.array([0, 0, 0, 2*0.6*10/100/10.37])  # intégral
-        self.Kcomp = 0.
-
+        # 2. Gains du Contrôleur
+        # Kp pour x, y, z
+        self.Kp = np.diag([150.0, 150.0, 150.0])
+        self.Kd = 2 * np.sqrt(self.Kp)
+        self.lmbda = 0.01  # Amortissement de la Jacobienne (Damped Least Squares)
 
     # -------------------- Lecture angles --------------------
     def read_angles(self):
@@ -88,7 +82,7 @@ class QARMReal(QARMInterface):
             logging.info("No data received")
         except ConnectionResetError:
             logging.info("Connection reset by peer")
-            
+
     # -------------------- Envoi commandes --------------------
     def send_speeds(self, v, grip):
         try:
@@ -107,7 +101,7 @@ class QARMReal(QARMInterface):
         color_image = np.asanyarray(color_frame.get_data())
         depth_image = np.asanyarray(depth_frame.get_data())
         return color_image, depth_image
-    
+
     # -------------------- Connexion --------------------
     def connect(self):
         connexion = False
@@ -128,102 +122,77 @@ class QARMReal(QARMInterface):
         cv2.destroyAllWindows()
         self.sock.close()
 
+    ####
     # -------------------- Contrôle en position --------------------
-    # def go_to_position_PID(self, target_angles, current_angles, current_speeds):
-    #     """
-    #     the following must be np.array
-    #     target_angles: [angle_base, angle_shoulder, angle_elbow, angle_wrist]
-    #     current_angles:  [angle_base, angle_shoulder, angle_elbow, angle_wrist]
-    #     current_speeds: [speed_base, speed_shoulder, speed_elbow, speed_wrist]
-    #     """
-    #     now = time.time()
-    #     if self.last_order_time is None:
-    #         self.last_order_time = now
-    #         return np.zeros_like(current_angles)
-       
-    #     dt = now - self.last_order_time # custom delta time, not necessarily corresponding to the timestep
-    #     self.last_order_time = now
+    ####
 
-    #     # 1. Erreur de position
-    #     erreur = target_angles - current_angles
-       
-    #     # 2. Terme P (Proportionnel)
-    #     P = self.Kp * erreur
-       
-    #     # 3. Terme I (Intégral)
-    #     self.error_integral += erreur * dt
-    #     I = self.Ki * self.error_integral
-       
-    #     # 4. Terme D (Dérivé)
-    #     D = -self.Kd * current_speeds
-       
-    #     # 5. Compensation dynamique (Couplage)
-    #     # On regarde comment la vitesse de l'épaule change (accélération)
-    #     acceleration = (current_speeds - self.last_real_speeds) / dt
-    #     geometrical_factor = -np.sin(current_angles[2])
-    #     # On applique un gain de compensation croisé :
-    #     # l'accélération de l'épaule [1] influence la commande du coude [2]
-    #     compensation = np.zeros_like(P)
-    #     compensation[2] = self.Kcomp * geometrical_factor * acceleration[1]
-       
-    #     # 6. Somme et Normalisation
-    #     vitesse_brute = P + I + D + compensation
-    #     order = np.clip(vitesse_brute, -self.limit_speeds_pourcentage, self.limit_speeds_pourcentage)
-       
-    #     # Sauvegarde pour le prochain cycle
-    #     self.last_real_speeds = np.copy(current_speeds)
+    def get_jacobian(self, q):
+        """Jacobienne simplifiée (à remplacer par vos paramètres DH)."""
+        # Exemple de dimension 3x4 pour un QArm
+        return np.random.rand(3, 4)
 
-    #     return order
+    def inverse_dynamics(self, q, dq, ddq):
+        """Calcule Tau = M*ddq + C*dq + G."""
+        # Ici, insérez vos matrices M, C, G calculées précédemment
+        M = np.eye(4) * 0.1
+        G = np.array([0, 0.5, 0.2, 0.1])
+        return M @ ddq + G  # Simplifié pour l'exemple
 
-    def go_to_position_PID(self, target_angles, current_angles, current_speeds):
-        now = time.time()
-        if self.last_order_time is None:
-            self.last_order_time = now
-            self.filtered_speeds = np.copy(current_speeds)
-            self.last_real_speeds = np.copy(current_speeds)
-            self.last_filtered_accel = np.zeros_like(current_speeds)
-            return np.zeros_like(current_angles)
+    def update(
+        self,
+        t: float,
+        coeffs: NDArray[np.float64],
+        q_mes: NDArray[np.float64],
+        dq_mes: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
+        """
+        Boucle de calcul principale (Contrôle en espace opérationnel).
+        Calcule le cycle complet : Trajectoire -> Cinématique -> Dynamique -> PWM.
+        """
 
-        dt = now - self.last_order_time
-        self.last_order_time = now
+        # A. Consigne issue du polynôme (Desired state)
+        pos_des, vel_des, accl_des = self.get_trajectory(t, coeffs)
 
-        # --- FILTRAGE DES VITESSES (Passe-bas) ---
-        # alpha_v proche de 1 = réactif mais bruité / proche de 0 = lisse mais lent
-        alpha_v = 0.2 
-        self.filtered_speeds = (alpha_v * current_speeds) + (1 - alpha_v) * self.filtered_speeds
+        # B. État actuel via Modèle Géométrique et Cinématique (Measured state)
+        pos_mes = self.forward_kinematics(q_mes)
+        J = self.get_jacobian(q_mes)
+        vel_mes = J @ dq_mes
 
-        # 1. Erreur de position
-        erreur = target_angles - current_angles
-        #print(erreur[3], target_angles[3], current_angles[3])
+        # C. Loi de commande cartésienne (Correction PD + Feedforward)
+        # On calcule l'accélération de commande 'a_cmd' pour corriger l'erreur
+        accl_cmd = accl_des + self.Kp @ (pos_des - pos_mes) + self.Kd @ (vel_des - vel_mes)
 
-        # 2. Terme P
-        P = self.Kp * erreur
+        # D. Inversion différentielle (Pseudo-inverse amortie)
+        # On transforme l'accélération cartésienne en accélération articulaire
+        # Formule : J_inv = J^T * (J*J^T + lambda^2*I)^-1
+        J_inv = J.T @ np.linalg.inv(J @ J.T + self.lmbda**2 * np.eye(3))
+        ddq_des = J_inv @ accl_cmd
 
-        # 3. Terme I (On le laisse à 0 pour le moment comme dans tes réglages)
-        self.error_integral += erreur * dt
-        I = self.Ki * self.error_integral
+        # E. Modèle Dynamique Inverse -> Calcul du couple (tau)
+        # tau = M(q)@ddq + C(q,dq)@dq + G(q) + F(dq)
+        tau = self.inverse_dynamics(q_mes, dq_mes, ddq_des)
 
-        # 4. Terme D : ON UTILISE LA VITESSE FILTRÉE
-        D = -self.Kd * self.filtered_speeds
+        # F. Modèle Électrique Moteur -> Tension -> PWM
+        # V = (R/kt)*tau + kv*dq (Compensation de la FEM et résistance)
+        v_motor = (self.R / self.kt) * tau + self.kv * dq_mes
 
-        # 5. Compensation (Accélération filtrée)
-        # On calcule l'accélération à partir des vitesses déjà lissées
-        raw_acceleration = (self.filtered_speeds - self.last_real_speeds) / dt
-        alpha_a = 0.1 # Filtre encore plus fort pour l'accélération
-        filtered_accel = (alpha_a * raw_acceleration) + (1 - alpha_a) * self.last_filtered_accel
-        self.last_filtered_accel = np.copy(filtered_accel)
+        # Conversion en pourcentage de la tension d'alimentation avec saturation
+        pwm = np.clip((v_motor / self.V_alim) * 100, -100, 100)
 
-        # Facteur géométrique : vérifie si cos() ne serait pas plus adapté
-        # (Si bras tendu = 0 rad, alors c'est cos)
-        geometrical_factor = -np.sin(current_angles[2]) 
+        return pwm
 
-        compensation = np.zeros_like(P)
-        compensation[2] = self.Kcomp * geometrical_factor * filtered_accel[1]
 
-        # 6. Somme et Saturation
-        vitesse_brute = P + I + D + compensation
-        order = np.clip(vitesse_brute, -self.limit_speeds_pourcentage, self.limit_speeds_pourcentage)
+# --- EXEMPLE D'UTILISATION ---
+ctrl = QArmController()
+x_init = np.array([0.2, 0.0, 0.1])
+v_init = np.array([0.0, 0.0, 0.0])
+a_init = np.array([0.0, 0.0, 0.0])
+x_final = np.array([0.4, 0.1, 0.3])
+v_final = np.array([0.0, 0.0, 0.0])
+a_final = np.array([0.0, 0.0, 0.0])
+c = ctrl.compute_quintic_coeffs(x_init, v_init, a_init, x_final, v_final, a_final, tf=5.0)
 
-        self.last_real_speeds = np.copy(self.filtered_speeds)
-
-        return order
+# Dans votre boucle temps réel :
+# q, dq = robot.read_encoders()
+# pwm = ctrl.update(current_time, c, q, dq)
+# robot.send_pwm(pwm)

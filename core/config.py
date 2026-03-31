@@ -1,5 +1,7 @@
 from enum import Enum
+
 from pydantic_settings import BaseSettings
+
 
 class MODE(Enum):
     """Enum pour sélectionner le mode de fonctionnement du bras robotique (réel ou simulation)."""
@@ -38,27 +40,6 @@ class Settings(BaseSettings):
     camera_width: int = 640
     camera_height: int = 480
     camera_fps: int = 30
-
-    # ========================================================================
-    # TIMING DES PHASES DE MOUVEMENT
-    # ========================================================================
-
-    phase_arm_end: float = 2.0  # Fin de la phase d'armement (secondes)
-    phase_accel_end: float = 3.5  # Fin de la phase d'accélération (secondes)
-    phase_release_end: float = 3.6  # Fin de la phase de relâchement (secondes)
-    phase_return_end: float = 5.0  # Fin du retour en position neutre (secondes)
-
-    # ========================================================================
-    # POSITIONS CIBLES ANGULAIRES
-    # ========================================================================
-
-    # Position d'armement (bras vers l'arrière) en radians
-    shoulder_back: float = -0.4
-    elbow_back: float = 0.3
-
-    # Position de lancer (bras vers l'avant) en radians
-    shoulder_forward: float = 0.6
-    elbow_forward: float = -0.2
 
     # ========================================================================
     # AUTRES PARAMÈTRES
