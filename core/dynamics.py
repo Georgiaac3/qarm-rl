@@ -360,11 +360,14 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     M = get_inertia_matrix(q_geo_mes, mL)
     C = get_centrifugal_matrix(q_geo_mes)
     G = get_gravity_vector(q_geo_mes, mL)
+    B = get_coriolis_matrix(q_geo_mes)
+
     friction = get_friction(dq_geo_mes)
+
     B_signals = get_coriolis_velocity_signals(dq_geo_mes)
 
     # 2. Calcul du torque total à appliquer
-    tau_cmd = M @ ddq_geo_cmd + C @ B_signals + G + friction
+    tau_cmd = M @ ddq_geo_cmd + B @ B_signals + C @ dq_geo_mes**2 + G + friction
 
     # 3. Conversion du torque en signal de tension (V) à envoyer au moteur
     Vcmd = (R / ktGR) * tau_cmd + kvGR * dq_geo_mes

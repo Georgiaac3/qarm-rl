@@ -2,15 +2,19 @@ import logging
 import socket
 import struct
 import time
-from typing import Tuple
+from queue import Queue
 
 import cv2
 import numpy as np
 import pyrealsense2 as rs
 from numpy.typing import NDArray
 
+from core import l1, l2, l3
 from core.config import settings
+from core.dynamics import get_pwm, transform_angles
+from core.missions.stationary_mission import StationaryMission
 from core.qarm.interface import QARMInterface
+from utils.types import Waypoint
 
 
 class QARMReal(QARMInterface):
@@ -43,18 +47,17 @@ class QARMReal(QARMInterface):
         )
         self.pipeline.start(config)
 
-        # PID position command
-        # 1. Paramètres Moteurs (SI)
-        self.R = 2.5  # Ohms
-        self.kt = 0.05  # N.m/A
-        self.kv = 0.05  # V.s/rad
-        self.V_alim = 24.0  # Volts
+        # Missiions à exécuter
+        self.missions = Queue()
 
-        # 2. Gains du Contrôleur
-        # Kp pour x, y, z
-        self.Kp = np.diag([150.0, 150.0, 150.0])
-        self.Kd = 2 * np.sqrt(self.Kp)
-        self.lmbda = 0.01  # Amortissement de la Jacobienne (Damped Least Squares)
+        # PID gains et damping pour l'inversion du Jacobien
+        self.Kp = np.diag(
+            [100.0, 100.0, 100.0]
+        )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
+        self.Kd = np.diag(
+            [20.0, 20.0, 20.0]
+        )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
+        self.lambda_damping = 0.1  # Facteur de damping pour l'inversion du Jacobien
 
     # -------------------- Lecture angles --------------------
     def read_angles(self):
@@ -71,6 +74,11 @@ class QARMReal(QARMInterface):
 
     # -------------------- Lecture packets --------------------
     def update_packet(self):
+        """
+        Lit les données UDP entrantes et met à jour le dernier packet reçu.
+        Le packet attendu est de 64 bytes, contenant 8 doubles (4 pour les angles, 4 pour les vitesses).
+        """
+
         try:
             data, _ = self.sock.recvfrom(1024)
             if len(data) == 64:
@@ -104,6 +112,9 @@ class QARMReal(QARMInterface):
 
     # -------------------- Connexion --------------------
     def connect(self):
+        """
+        Attend la connexion du robot en envoyant périodiquement des commandes de vitesse nulle jusqu'à ce que des angles soient reçus.
+        """
         connexion = False
         while not connexion:
             self.send_speeds([0.0, -0.1, -0.1, 0.0], 0)
@@ -122,77 +133,218 @@ class QARMReal(QARMInterface):
         cv2.destroyAllWindows()
         self.sock.close()
 
+    # -------------------- Mission initiale --------------------
+    def init_stationnary(self):
+        """
+        Empile une mission de stationnarité pour que le robot reste immobile à sa position actuelle.
+        """
+        waiting_mission = StationaryMission()
+        self.missions.put(waiting_mission)
+        while waiting_mission.ini_waypoint is None:
+            print(
+                "En attente de la position actuelle du robot pour initialiser la mission de stationnarité..."
+            )
+            self.update_packet()
+            angles_phi = self.read_angles()
+            if angles_phi is not None:
+                q_mes, _, _ = transform_angles(
+                    np.array(angles_phi).reshape(4, 1), np.zeros((4, 1)), np.zeros((4, 1))
+                )
+                X_mes = self.forward_kinematics(q_mes)
+                waiting_mission.ini_waypoint = Waypoint(position=X_mes)
+            time.sleep(0.01)
+
     ####
     # -------------------- Contrôle en position --------------------
     ####
 
-    def get_jacobian(self, q):
-        """Jacobienne simplifiée (à remplacer par vos paramètres DH)."""
-        # Exemple de dimension 3x4 pour un QArm
-        return np.random.rand(3, 4)
+    def get_jacobian(self, q: NDArray[np.float64]) -> NDArray[np.float64]:
+        """
+        Calcule le jacobien (J) de la cinématique directe du robot.
+        - q : vecteur colonne des angles articulaires de la dynamique géométrique (4,1)
+        - retourne : jacobien (3,4)
+        - les paramètres géométriques du robot sont définis dans core/config.py
+        """
 
-    def inverse_dynamics(self, q, dq, ddq):
-        """Calcule Tau = M*ddq + C*dq + G."""
-        # Ici, insérez vos matrices M, C, G calculées précédemment
-        M = np.eye(4) * 0.1
-        G = np.array([0, 0.5, 0.2, 0.1])
-        return M @ ddq + G  # Simplifié pour l'exemple
+        if q.shape != (4, 1):
+            raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
+
+        c1 = np.cos(q[0, 0])
+        s1 = np.sin(q[0, 0])
+        c2 = np.cos(q[1, 0])
+        s2 = np.sin(q[1, 0])
+        c23 = np.cos(q[1, 0] + q[2, 0])
+        s23 = np.sin(q[1, 0] + q[2, 0])
+        J = np.array(
+            [
+                [-l2 * s1 * c2 + l3 * s1 * s23, -l2 * c1 * s2 - l3 * c1 * c23, -l3 * c1 * c23],
+                [l2 * c1 * c2 - l3 * c1 * s23, -l2 * s1 * s2 - l3 * s1 * c23, -l3 * s1 * c23],
+                [0, -l2 * c2 + l3 * s23, l3 * s23],
+            ]
+        )
+
+        return J
+
+    def get_djacobian(self, q: NDArray[np.float64], dq: NDArray[np.float64]) -> NDArray[np.float64]:
+        """
+        Calcule la dérivée du jacobien (dJ) de la cinématique directe du robot.
+        - q : vecteur colonne des angles articulaires de la dynamique géométrique (4,1)
+        - dq : vecteur colonne des vitesses articulaires de la dynamique géométrique (4,1)
+        - retourne : dérivée du jacobien (3,4)
+        - les paramètres géométriques du robot sont définis dans core/config.py
+        """
+
+        if q.shape != (4, 1) or dq.shape != (4, 1):
+            raise ValueError("q et dq doivent être des vecteurs colonne de dimension (4, 1)")
+
+        dq1 = dq[0, 0]
+        dq2 = dq[1, 0]
+        dq3 = dq[2, 0]
+
+        c1 = np.cos(q[0, 0])
+        s1 = np.sin(q[0, 0])
+        c2 = np.cos(q[1, 0])
+        s2 = np.sin(q[1, 0])
+        c23 = np.cos(q[1, 0] + q[2, 0])
+        s23 = np.sin(q[1, 0] + q[2, 0])
+        dJ = np.array(
+            [
+                [
+                    (-l2 * c1 * c2 + l3 * c1 * s23) * dq1
+                    + (l2 * s1 * s2 + l3 * s1 * c23) * dq2
+                    + (l3 * s1 * c23) * dq3,
+                    (l2 * s1 * s2 + l3 * s1 * c23) * dq1
+                    + (-l2 * c1 * c2 + l3 * c1 * s23) * dq2
+                    + (l3 * c1 * s23) * dq3,
+                    l3 * s1 * c23 * dq1 + (l3 * c1 * s23) * dq2 + (l3 * c1 * s23) * dq3,
+                ],
+                [
+                    (-l2 * s1 * c2 + l3 * s1 * s23) * dq1
+                    + (-l2 * c1 * s2 - l3 * c1 * c23) * dq2
+                    + (-l3 * c1 * c23) * dq3,
+                    (-l2 * c1 * s2 - l3 * c1 * c23) * dq1
+                    + (-l2 * s1 * c2 + l3 * s1 * s23) * dq2
+                    + (l3 * s1 * s23) * dq3,
+                    -l3 * c1 * c23 * dq1 + (l3 * s1 * s23) * dq2 + (l3 * s1 * s23) * dq3,
+                ],
+                [
+                    0,
+                    (l2 * s2 + l3 * c23) * dq2 + (l3 * c23) * dq3,
+                    (l3 * c23) * dq2 + (l3 * c23) * dq3,
+                ],
+            ]
+        )
+
+        return dJ
+
+    def forward_kinematics(self, q: NDArray[np.float64]) -> NDArray[np.float64]:
+        """
+        Calcule la position cartésienne de l'effecteur en fonction des angles articulaires q.
+        - q : vecteur colonne des angles articulaires de la dynamique géométrique (4,1)
+        - retourne : position cartésienne de l'effecteur (3,1)
+        - les paramètres géométriques du robot sont définis dans core/config.py
+        """
+        if q.shape != (4, 1):
+            raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
+
+        c1 = np.cos(q[0, 0])
+        s1 = np.sin(q[0, 0])
+        c2 = np.cos(q[1, 0])
+        s2 = np.sin(q[1, 0])
+        c23 = np.cos(q[1, 0] + q[2, 0])
+        s23 = np.sin(q[1, 0] + q[2, 0])
+        x = l2 * c1 * c2 - l3 * c1 * s23
+        y = l2 * s1 * c2 - l3 * s1 * s23
+        z = l1 - l2 * s2 - l3 * c23
+        return np.array([[x], [y], [z]])
 
     def update(
         self,
         t: float,
-        coeffs: NDArray[np.float64],
-        q_mes: NDArray[np.float64],
-        dq_mes: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
+        phi_mes: NDArray[np.float64],
+        dphi_mes: NDArray[np.float64],
+    ) -> None:
         """
-        Boucle de calcul principale (Contrôle en espace opérationnel).
-        Calcule le cycle complet : Trajectoire -> Cinématique -> Dynamique -> PWM.
+        Met à jour la commande envoyée au robot en fonction de la mission courante et de l'état mesuré du robot.
+        - t : temps actuel en secondes
+        - phi_mes : vecteur colonne des angles articulaires mesurés du moteur (4,1)
+        - dphi_mes : vecteur colonne des vitesses articulaires mesurées du moteur (4,1)
+        - retourne : None, mais envoie les commandes de vitesse (PWM) au robot via self.send_speeds()
+        - la logique de contrôle est la suivante :
+            1. Si aucune mission, rester stationnaire -> cela ajoute une mission de stationnarité à la queue
+            2. Récupération de la prochaine mission (la plus ancienne ajoutée)
+            3. Si la mission a une condition de fin et qu'elle est remplie, la retirer de la queue et passer à la mission suivante (ou rester stationnaire si plus de mission)
+            4. Si la mission n'a pas de waypoint initial, l'initialiser avec la position actuelle du robot
+            5. Calcul du PWM a envoyer au robot pour suivre la trajectoire définie par la mission à l'instant t :
+                - Obtenir le waypoint de consigne à l'instant t
+                - Calculer la commande en accélération cartésienne avec un PD en position et vitesse
+                - Convertir la commande en accélération cartésienne en commande en accélération articulaire avec l'inversion du Jacobien (Damped Least Squares)
+                - Convertir la commande en accélération articulaire en commande de couple (PWM) avec la dynamique du robot (fonction get_pwm) et en tenant compte de la charge utile de la mission
+                - Envoyer les commandes de vitesse (PWM) au robot avec self.send_speeds
         """
 
-        # A. Consigne issue du polynôme (Desired state)
-        pos_des, vel_des, accl_des = self.get_trajectory(t, coeffs)
+        if phi_mes.shape != (4, 1) or dphi_mes.shape != (4, 1):
+            raise ValueError(
+                "phi_mes et dphi_mes doivent être des vecteurs colonne de dimension (4, 1)"
+            )
 
-        # B. État actuel via Modèle Géométrique et Cinématique (Measured state)
-        pos_mes = self.forward_kinematics(q_mes)
+        # Position et vitesses articulaires et cartésiennes mesurées
+        q_mes, dq_mes, _ = transform_angles(phi_mes, dphi_mes, np.zeros_like(phi_mes))
+
         J = self.get_jacobian(q_mes)
-        vel_mes = J @ dq_mes
+        X_mes = self.forward_kinematics(q_mes)
+        dX_mes = J @ dq_mes
 
-        # C. Loi de commande cartésienne (Correction PD + Feedforward)
-        # On calcule l'accélération de commande 'a_cmd' pour corriger l'erreur
-        accl_cmd = accl_des + self.Kp @ (pos_des - pos_mes) + self.Kd @ (vel_des - vel_mes)
+        # Si aucune mission, rester stationnaire -> cela ajoute une mission de stationnarité à la queue
+        if self.missions.empty():
+            self.init_stationnary()
 
-        # D. Inversion différentielle (Pseudo-inverse amortie)
-        # On transforme l'accélération cartésienne en accélération articulaire
-        # Formule : J_inv = J^T * (J*J^T + lambda^2*I)^-1
-        J_inv = J.T @ np.linalg.inv(J @ J.T + self.lmbda**2 * np.eye(3))
-        ddq_des = J_inv @ accl_cmd
+        # Récupération de la prochaine mission (la plus ancienne ajoutée)
+        current_mission = self.missions.queue[0]
 
-        # E. Modèle Dynamique Inverse -> Calcul du couple (tau)
-        # tau = M(q)@ddq + C(q,dq)@dq + G(q) + F(dq)
-        tau = self.inverse_dynamics(q_mes, dq_mes, ddq_des)
+        if current_mission.start_time is not None:
+            should_finish = current_mission.finish_condition(
+                t - current_mission.start_time, Waypoint(position=X_mes, velocity=dX_mes)
+            )
+            if should_finish:
+                self.missions.get()  # Retirer la mission terminée de la queue
+                if not self.missions.empty():
+                    current_mission = self.missions.queue[0]  # Passer à la mission suivante
+                else:
+                    self.init_stationnary()  # Si plus de mission, rester stationnaire
 
-        # F. Modèle Électrique Moteur -> Tension -> PWM
-        # V = (R/kt)*tau + kv*dq (Compensation de la FEM et résistance)
-        v_motor = (self.R / self.kt) * tau + self.kv * dq_mes
+        if current_mission.start_time is None:
+            current_mission.start_time = t
+            current_mission.set_ini_waypoint(Waypoint(position=X_mes, velocity=dX_mes))
 
-        # Conversion en pourcentage de la tension d'alimentation avec saturation
-        pwm = np.clip((v_motor / self.V_alim) * 100, -100, 100)
+        ############################
+        # Traitement de la mission #
+        ############################
 
-        return pwm
+        ## Calcul du PWM a envoyer au robot pour suivre la trajectoire définie par la mission à l'instant t
+        # 1. Obtenir le waypoint de consigne à l'instant t
+        waypoint_desired = current_mission.get_waypoint_at_t(t - current_mission.start_time)
+        X_des = waypoint_desired.position
+        dX_des = waypoint_desired.velocity
+        ddX_des = waypoint_desired.acceleration
 
+        # 3. Commande et inversion
+        ddX_cmd = ddX_des + self.Kp @ (X_des - X_mes) + self.Kd @ (dX_des - dX_mes)
 
-# --- EXEMPLE D'UTILISATION ---
-ctrl = QArmController()
-x_init = np.array([0.2, 0.0, 0.1])
-v_init = np.array([0.0, 0.0, 0.0])
-a_init = np.array([0.0, 0.0, 0.0])
-x_final = np.array([0.4, 0.1, 0.3])
-v_final = np.array([0.0, 0.0, 0.0])
-a_final = np.array([0.0, 0.0, 0.0])
-c = ctrl.compute_quintic_coeffs(x_init, v_init, a_init, x_final, v_final, a_final, tf=5.0)
+        # Damped Least Squares pour l'inversion du Jacobien
+        dJ = self.get_djacobian(q_mes, dq_mes)
+        J_dag = J.T @ np.linalg.pinv(
+            J @ J.T + (self.lambda_damping**2) * np.eye(J.shape[0])
+        )  # Pseudo-inverse avec damping
+        ddq_cmd = J_dag @ (ddX_cmd - dJ @ dq_mes)  # Commande en accélération articulaire
 
-# Dans votre boucle temps réel :
-# q, dq = robot.read_encoders()
-# pwm = ctrl.update(current_time, c, q, dq)
-# robot.send_pwm(pwm)
+        # 4. Dynmique du bras et envoi des commandes pwwm
+        mL = (
+            current_mission.load if current_mission.load is not None else 0.0
+        )  # Charge utile, à intégrer dans la dynamique
+        tau_cmd = get_pwm(
+            q_mes, dq_mes, ddq_cmd, mL
+        )  # Convertir les accélérations commandées en commandes de couple (PWM)
+        self.send_speeds(tau_cmd.tolist(), 0)  # Envoi des commandes de vitesse (PWM) au robot
+
+        # TODO: Affichage de la caméra, gestion des erreurs, etc.
