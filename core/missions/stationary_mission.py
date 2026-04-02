@@ -15,9 +15,10 @@ class StationaryMission(Mission):
 
     def __init__(self, ini_waypoint=None):
         super().__init__()
-        self.check_waypoint_validity(
-            ini_waypoint
-        )  # Vérifie que le waypoint initial est valide pour une mission de stationnarité
+        if ini_waypoint is not None:
+            self.check_waypoint_validity(
+                ini_waypoint
+            )  # Vérifie que le waypoint initial est valide pour une mission de stationnarité
         self.ini_waypoint = ini_waypoint
 
     def finish_condition(self, t, waypoint_mes):
@@ -37,6 +38,8 @@ class StationaryMission(Mission):
 
     def check_waypoint_validity(self, waypoint):
         """Vérifie que le waypoint est valide pour une mission de stationnarité (vitesses et accélérations nulles)."""
+        if waypoint is None:
+            raise ValueError("Waypoint ne peut pas être None pour une mission de stationnarité.")
         if waypoint.velocity is not None and not np.allclose(waypoint.velocity, 0):
             raise ValueError("Pour une mission de stationnarité, la vitesse doit être nulle.")
         if waypoint.acceleration is not None and not np.allclose(waypoint.acceleration, 0):

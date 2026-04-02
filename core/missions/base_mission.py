@@ -16,10 +16,21 @@ class Mission(ABC):
     """
 
     def __init__(self):
+        name = self.__class__.__name__
+        hashtags = "#" * len(name)
+        print(
+            "\n"
+            f"###############################{hashtags}###\n"
+            f"#  Nouvelle mission en créée : {name}  #\n"
+            f"###############################{hashtags}###"
+        )
+        
         self.start_time = (
             None  # Temps de début de la mission, à initialiser lors de l'empilement de la mission
         )
         self.finished = False  # Indique si la mission est terminée
+
+        self.load = 0.0  # Charge utile associée à la mission, peut être utilisée pour ajuster les gains du contrôleur en fonction de la charge transportée
 
     def stop(self):
         """Permet de terminer la mission et de passer à la mission suivante."""

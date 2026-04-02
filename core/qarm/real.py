@@ -6,10 +6,10 @@ from queue import Queue
 
 import cv2
 import numpy as np
-import pyrealsense2 as rs
+#import pyrealsense2 as rs
 from numpy.typing import NDArray
 
-from core import l1, l2, l3
+from core.dynamics import l1, l2, l3
 from core.config import settings
 from core.dynamics import get_pwm, transform_angles
 from core.missions.stationary_mission import StationaryMission
@@ -29,45 +29,48 @@ class QARMReal(QARMInterface):
         self.last_packet = None  # (0.0,) * 8 -> 4 first coordonnates for the angles, 4 last coordonnates for speeds
 
         # Caméra avec RealSense
-        self.pipeline = rs.pipeline()
-        config = rs.config()
-        config.enable_stream(
-            rs.stream.color,
-            settings.camera_width,
-            settings.camera_height,
-            rs.format.bgr8,
-            settings.camera_fps,
-        )
-        config.enable_stream(
-            rs.stream.depth,
-            settings.camera_width,
-            settings.camera_height,
-            rs.format.z16,
-            settings.camera_fps,
-        )
-        self.pipeline.start(config)
+        #self.pipeline = rs.pipeline()
+        #config = rs.config()
+        #config.enable_stream(
+        #    rs.stream.color,
+        #    settings.camera_width,
+        #    settings.camera_height,
+        #    rs.format.bgr8,
+        #    settings.camera_fps,
+        #)
+        #config.enable_stream(
+        #    rs.stream.depth,
+        #    settings.camera_width,
+        #    settings.camera_height,
+        #    rs.format.z16,
+        #    settings.camera_fps,
+        #)
+        #self.pipeline.start(config)
 
         # Missiions à exécuter
         self.missions = Queue()
 
         # PID gains et damping pour l'inversion du Jacobien
+        self.I3 = np.eye(3)  # Matrice identité 3x3 pré-allouée pour le calcul du Jacobien
         self.Kp = np.diag(
-            [100.0, 100.0, 100.0]
+            [0, 0, 0]
         )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.Kd = np.diag(
-            [20.0, 20.0, 20.0]
+            [0, 0, 0]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.lambda_damping = 0.1  # Facteur de damping pour l'inversion du Jacobien
+        self.lambda_damping = 0.05  # Facteur de damping pour l'inversion du Jacobien
 
     # -------------------- Lecture angles --------------------
     def read_angles(self):
+        """Retourne les angles phi mesurés des moteurs du robot, ou None si aucune donnée n'est disponible."""
         if self.last_packet:
-            print("Angles lus:", self.last_packet[:4])
+            #print("Angles lus:", self.last_packet[:4])
             return self.last_packet[:4]
         return None
 
     # -------------------- Lecture vitesses --------------------
     def read_speeds(self):
+        """Retourne les vitesses angulaires dphi mesurées des moteurs du robot, ou None si aucune donnée n'est disponible."""
         if self.last_packet:
             return self.last_packet[4:]
         return None
@@ -92,7 +95,7 @@ class QARMReal(QARMInterface):
             logging.info("Connection reset by peer")
 
     # -------------------- Envoi commandes --------------------
-    def send_speeds(self, v, grip):
+    def send_speeds(self, v: list, grip: float) -> None:
         try:
             message_bytes = struct.pack("ddddd", v[0], v[1], v[2], v[3], grip)
             self.sock.sendto(message_bytes, (settings.udp_ip, settings.udp_port_send))
@@ -115,6 +118,10 @@ class QARMReal(QARMInterface):
         """
         Attend la connexion du robot en envoyant périodiquement des commandes de vitesse nulle jusqu'à ce que des angles soient reçus.
         """
+        print("\n" \
+        "################################\n" \
+        "#    Tentative de connexion    #\n" \
+        "################################")
         connexion = False
         while not connexion:
             self.send_speeds([0.0, -0.1, -0.1, 0.0], 0)
@@ -142,7 +149,7 @@ class QARMReal(QARMInterface):
         self.missions.put(waiting_mission)
         while waiting_mission.ini_waypoint is None:
             print(
-                "En attente de la position actuelle du robot pour initialiser la mission de stationnarité..."
+                "En attente de la position actuelle du robot pour renseigner ini_waypoint..."
             )
             self.update_packet()
             angles_phi = self.read_angles()
@@ -153,6 +160,7 @@ class QARMReal(QARMInterface):
                 X_mes = self.forward_kinematics(q_mes)
                 waiting_mission.ini_waypoint = Waypoint(position=X_mes)
             time.sleep(0.01)
+        print("Mission de stationnarité initialisée avec la position actuelle du robot.")
 
     ####
     # -------------------- Contrôle en position --------------------
@@ -177,9 +185,9 @@ class QARMReal(QARMInterface):
         s23 = np.sin(q[1, 0] + q[2, 0])
         J = np.array(
             [
-                [-l2 * s1 * c2 + l3 * s1 * s23, -l2 * c1 * s2 - l3 * c1 * c23, -l3 * c1 * c23],
-                [l2 * c1 * c2 - l3 * c1 * s23, -l2 * s1 * s2 - l3 * s1 * c23, -l3 * s1 * c23],
-                [0, -l2 * c2 + l3 * s23, l3 * s23],
+                [-l2 * s1 * c2 + l3 * s1 * s23, -l2 * c1 * s2 - l3 * c1 * c23, -l3 * c1 * c23, 0],
+                [l2 * c1 * c2 - l3 * c1 * s23, -l2 * s1 * s2 - l3 * s1 * c23, -l3 * s1 * c23, 0],
+                [0, -l2 * c2 + l3 * s23, l3 * s23, 0],
             ]
         )
 
@@ -217,6 +225,7 @@ class QARMReal(QARMInterface):
                     + (-l2 * c1 * c2 + l3 * c1 * s23) * dq2
                     + (l3 * c1 * s23) * dq3,
                     l3 * s1 * c23 * dq1 + (l3 * c1 * s23) * dq2 + (l3 * c1 * s23) * dq3,
+                    0,
                 ],
                 [
                     (-l2 * s1 * c2 + l3 * s1 * s23) * dq1
@@ -226,11 +235,13 @@ class QARMReal(QARMInterface):
                     + (-l2 * s1 * c2 + l3 * s1 * s23) * dq2
                     + (l3 * s1 * s23) * dq3,
                     -l3 * c1 * c23 * dq1 + (l3 * s1 * s23) * dq2 + (l3 * s1 * s23) * dq3,
+                    0,
                 ],
                 [
                     0,
                     (l2 * s2 + l3 * c23) * dq2 + (l3 * c23) * dq3,
                     (l3 * c23) * dq2 + (l3 * c23) * dq3,
+                    0,
                 ],
             ]
         )
@@ -334,7 +345,7 @@ class QARMReal(QARMInterface):
         # Damped Least Squares pour l'inversion du Jacobien
         dJ = self.get_djacobian(q_mes, dq_mes)
         J_dag = J.T @ np.linalg.pinv(
-            J @ J.T + (self.lambda_damping**2) * np.eye(J.shape[0])
+            J @ J.T + (self.lambda_damping**2) * self.I3
         )  # Pseudo-inverse avec damping
         ddq_cmd = J_dag @ (ddX_cmd - dJ @ dq_mes)  # Commande en accélération articulaire
 
@@ -345,6 +356,7 @@ class QARMReal(QARMInterface):
         tau_cmd = get_pwm(
             q_mes, dq_mes, ddq_cmd, mL
         )  # Convertir les accélérations commandées en commandes de couple (PWM)
-        self.send_speeds(tau_cmd.tolist(), 0)  # Envoi des commandes de vitesse (PWM) au robot
+
+        self.send_speeds(tau_cmd.flatten().tolist(), 0)  # Envoi des commandes de vitesse (PWM) au robot
 
         # TODO: Affichage de la caméra, gestion des erreurs, etc.
