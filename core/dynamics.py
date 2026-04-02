@@ -39,7 +39,7 @@ Ltotal = (
     l1 + Lbras
 )  # Longueur totale du système, utilisée pour les contraintes de vitesse et accélération linéaires
 
-dq_max = np.pi/2 # Vitesse angulaire maximale (rad/s)
+dq_max = np.pi / 2  # Vitesse angulaire maximale (rad/s)
 
 # Paramètres dynamiques (Inerties et centres de masse)
 I1A, I1L = 1.489e-3, 1.0

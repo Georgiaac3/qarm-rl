@@ -24,7 +24,7 @@ class Mission(ABC):
             f"#  Nouvelle mission en créée : {name}  #\n"
             f"###############################{hashtags}###"
         )
-        
+
         self.start_time = (
             None  # Temps de début de la mission, à initialiser lors de l'empilement de la mission
         )

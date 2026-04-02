@@ -6,12 +6,12 @@ from queue import Queue
 
 import cv2
 import numpy as np
-#import pyrealsense2 as rs
+
+# import pyrealsense2 as rs
 from numpy.typing import NDArray
 
-from core.dynamics import l1, l2, l3
 from core.config import settings
-from core.dynamics import get_pwm, transform_angles
+from core.dynamics import get_pwm, l1, l2, l3, transform_angles
 from core.missions.stationary_mission import StationaryMission
 from core.qarm.interface import QARMInterface
 from utils.types import Waypoint
@@ -29,23 +29,23 @@ class QARMReal(QARMInterface):
         self.last_packet = None  # (0.0,) * 8 -> 4 first coordonnates for the angles, 4 last coordonnates for speeds
 
         # Caméra avec RealSense
-        #self.pipeline = rs.pipeline()
-        #config = rs.config()
-        #config.enable_stream(
+        # self.pipeline = rs.pipeline()
+        # config = rs.config()
+        # config.enable_stream(
         #    rs.stream.color,
         #    settings.camera_width,
         #    settings.camera_height,
         #    rs.format.bgr8,
         #    settings.camera_fps,
-        #)
-        #config.enable_stream(
+        # )
+        # config.enable_stream(
         #    rs.stream.depth,
         #    settings.camera_width,
         #    settings.camera_height,
         #    rs.format.z16,
         #    settings.camera_fps,
-        #)
-        #self.pipeline.start(config)
+        # )
+        # self.pipeline.start(config)
 
         # Missiions à exécuter
         self.missions = Queue()
@@ -64,7 +64,7 @@ class QARMReal(QARMInterface):
     def read_angles(self):
         """Retourne les angles phi mesurés des moteurs du robot, ou None si aucune donnée n'est disponible."""
         if self.last_packet:
-            #print("Angles lus:", self.last_packet[:4])
+            # print("Angles lus:", self.last_packet[:4])
             return self.last_packet[:4]
         return None
 
@@ -118,10 +118,12 @@ class QARMReal(QARMInterface):
         """
         Attend la connexion du robot en envoyant périodiquement des commandes de vitesse nulle jusqu'à ce que des angles soient reçus.
         """
-        print("\n" \
-        "################################\n" \
-        "#    Tentative de connexion    #\n" \
-        "################################")
+        print(
+            "\n"
+            "################################\n"
+            "#    Tentative de connexion    #\n"
+            "################################"
+        )
         connexion = False
         while not connexion:
             self.send_speeds([0.0, -0.1, -0.1, 0.0], 0)
@@ -148,9 +150,7 @@ class QARMReal(QARMInterface):
         waiting_mission = StationaryMission()
         self.missions.put(waiting_mission)
         while waiting_mission.ini_waypoint is None:
-            print(
-                "En attente de la position actuelle du robot pour renseigner ini_waypoint..."
-            )
+            print("En attente de la position actuelle du robot pour renseigner ini_waypoint...")
             self.update_packet()
             angles_phi = self.read_angles()
             if angles_phi is not None:
@@ -357,6 +357,8 @@ class QARMReal(QARMInterface):
             q_mes, dq_mes, ddq_cmd, mL
         )  # Convertir les accélérations commandées en commandes de couple (PWM)
 
-        self.send_speeds(tau_cmd.flatten().tolist(), 0)  # Envoi des commandes de vitesse (PWM) au robot
+        self.send_speeds(
+            tau_cmd.flatten().tolist(), 0
+        )  # Envoi des commandes de vitesse (PWM) au robot
 
         # TODO: Affichage de la caméra, gestion des erreurs, etc.
