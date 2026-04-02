@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 logging.basicConfig(
+    filename="robot.log",
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     filename="robot.log",
