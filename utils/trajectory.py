@@ -2,6 +2,8 @@
 Module de calcul de trajectoire pour un robot à partir de conditions initiales et finales.
 """
 
+from typing import Callable, Tuple
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -12,7 +14,7 @@ from utils.types import Waypoint
 def get_quintic_coeffs_and_time(
     waypoint_start: Waypoint,
     waypoint_end: Waypoint,
-) -> tuple[NDArray[np.float64], float]:
+) -> Tuple[NDArray[np.float64], float]:
     """
     Calcule les coefficients du polynôme de degré 5 pour x, y, z.
     Ils sont solution du système linéaire :
@@ -60,7 +62,14 @@ def get_quintic_coeffs_and_time(
 def get_coeffs_as_function_of_time(
     waypoint_start: Waypoint,
     waypoint_end: Waypoint,
-) -> tuple[callable, callable, callable, callable, callable, callable]:
+) -> Tuple[
+    Callable[[], NDArray[np.float64]],
+    Callable[[], NDArray[np.float64]],
+    Callable[[], NDArray[np.float64]],
+    Callable[[float], NDArray[np.float64]],
+    Callable[[float], NDArray[np.float64]],
+    Callable[[float], NDArray[np.float64]],
+]:
     """
     Calcule les coefficients du polynôme de degré 5 pour x, y, z en fonction du temps tf.
     """

@@ -5,8 +5,6 @@ Les missions n'ont pas pour vocation de gérer la boucle de contrôle, mais simp
 
 from abc import ABC, abstractmethod
 
-from numpy.typing import NDArray
-
 from utils.types import Waypoint
 
 
@@ -51,3 +49,21 @@ class Mission(ABC):
     @abstractmethod
     def get_waypoint_at_t(self, t: float) -> Waypoint:
         """Retourne le point de consigne (position, vitesse, accélération) à l'instant t."""
+
+    def say_hello(self):
+        """Message de bienvenue spécifique à la mission, peut être utilisé pour indiquer le début d'une nouvelle phase de la tâche."""
+        print(
+            "\n"
+            f"###############################{'#' * len(self.__class__.__name__)}\n"
+            f"#  Mission {self.__class__.__name__} : Starting now !  #\n"
+            f"###############################{'#' * len(self.__class__.__name__)}"
+        )
+
+    def say_goodbye(self):
+        """Message d'au revoir spécifique à la mission, peut être utilisé pour indiquer la fin d'une phase de la tâche."""
+        print(
+            "\n"
+            f"###############################{'#' * len(self.__class__.__name__)}###\n"
+            f"#  Mission {self.__class__.__name__} : Finished ! Moving to the next one...  #\n"
+            f"###############################{'#' * len(self.__class__.__name__)}###"
+        )
