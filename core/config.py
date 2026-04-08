@@ -1,9 +1,9 @@
 """
 Ce module contient la classe de configuration de l'application, qui utilise Pydantic pour définir les paramètres de configuration et les valeurs par défaut. Il inclut également une énumération pour sélectionner le mode de fonctionnement du bras robotique (réel ou simulation).
 """
-from typing import Dict, List
 
 from enum import Enum
+from typing import Dict, List
 
 from pydantic_settings import BaseSettings
 
