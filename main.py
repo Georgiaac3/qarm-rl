@@ -10,7 +10,7 @@ from ui.dashboard import RealTimeApp
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
 
-    data_queue = mp.Queue()
+    data_queue = mp.Queue(maxsize=100)
     stop_event = mp.Event()
 
     process_run_robot = mp.Process(target=run_robot, args=(data_queue, stop_event))
