@@ -2,7 +2,7 @@
 Module de mission de suivi de trajectoire multi-segment.
 """
 
-from typing import List, Union
+from typing import List, Union, Optional
 
 from core.missions.base_mission import Mission
 from utils.trajectory import get_desired_state, get_quintic_coeffs_and_time
@@ -16,7 +16,7 @@ class MultiTrajectoryMission(Mission):
     """
 
     def __init__(
-        self, waypoints: Union[Waypoint, List[Waypoint]], ini_waypoint: Waypoint | None = None
+        self, waypoints: Union[Waypoint, List[Waypoint]], ini_waypoint: Optional[Waypoint] = None
     ):
         """
         ini_waypoint: waypoint initial (3D). Les vitesses et accélérations initiales et finales (respectivement du premier et dernier waypoint) doivent être nulles par mesure de sécurité.
@@ -29,7 +29,7 @@ class MultiTrajectoryMission(Mission):
         )
         self.waypoints = waypoints if isinstance(waypoints, list) else [waypoints]
 
-        self.segments: list[dict] = (
+        self.segments: List[dict] = (
             []
         )  # Liste des segments de la trajectoire avec leurs coefficients et durées
         self.total_duration = 0.0

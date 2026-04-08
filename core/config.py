@@ -1,3 +1,8 @@
+"""
+Ce module contient la classe de configuration de l'application, qui utilise Pydantic pour définir les paramètres de configuration et les valeurs par défaut. Il inclut également une énumération pour sélectionner le mode de fonctionnement du bras robotique (réel ou simulation).
+"""
+from typing import Dict, List
+
 from enum import Enum
 
 from pydantic_settings import BaseSettings
@@ -40,6 +45,20 @@ class Settings(BaseSettings):
     camera_width: int = 640
     camera_height: int = 480
     camera_fps: int = 30
+
+    # ========================================================================
+    # VARIABLES À AFFICHER
+    # ========================================================================
+    graphs_2d: Dict[str, List[str]] = {
+        "Angles Articulations mesurés (rad)": [
+            "Joint_1_mes",
+            "Joint_2_mes",
+            "Joint_3_mes",
+            "Joint_4_mes",
+        ],
+        "Vitesses mesurées (rad/s)": ["Speed_1_mes", "Speed_2_mes", "Speed_3_mes", "Speed_4_mes"],
+    }
+    graphs_3d: List[str] = ["TCP_Trajectoire"]
 
     # ========================================================================
     # AUTRES PARAMÈTRES

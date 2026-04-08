@@ -3,6 +3,7 @@ import socket
 import struct
 import time
 from queue import Queue
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -59,6 +60,9 @@ class QARMReal(QARMInterface):
             [0, 0, 0]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.lambda_damping = 0.05  # Facteur de damping pour l'inversion du Jacobien
+
+        # Stockage de la dernière position mesurée pour l'affichage dans l'interface graphique
+        self.last_X_mes: Optional[NDArray[np.float64]] = None
 
     # -------------------- Lecture angles --------------------
     def read_angles(self):
@@ -304,6 +308,7 @@ class QARMReal(QARMInterface):
 
         J = self.get_jacobian(q_mes)
         X_mes = self.forward_kinematics(q_mes)
+        self.last_X_mes = X_mes  # Stocker la dernière position mesurée pour l'affichage dans l'interface graphique
         dX_mes = J @ dq_mes
 
         # Si aucune mission, rester stationnaire -> cela ajoute une mission de stationnarité à la queue
@@ -358,7 +363,5 @@ class QARMReal(QARMInterface):
         )  # Convertir les accélérations commandées en commandes de couple (PWM)
 
         self.send_speeds(
-            tau_cmd.flatten().tolist(), 0
+            tau_cmd.ravel().tolist(), 0
         )  # Envoi des commandes de vitesse (PWM) au robot
-
-        # TODO: Affichage de la caméra, gestion des erreurs, etc.
