@@ -101,20 +101,17 @@ def run_robot(data_queue=None, stop_event=None):
 
         # --- ENVOI DES DONNÉES POUR VISUALISATION/LOGGING ---
         if data_queue is not None:
-            if phi is None or dphi is None or robot.last_X_mes is None:
-                continue  # On n'envoie pas de données incomplètes
+            if phi is not None and dphi is not None and robot.last_X_mes is not None:
+                packet = {
+                    "Angles Articulations mesurés (rad)": phi.ravel().tolist(),
+                    "Vitesses mesurées (rad/s)": dphi.ravel().tolist(),
+                    "TCP_Trajectoire": robot.last_X_mes.ravel().tolist(),
+                }
 
-            packet = {
-                "Angles Articulations mesurés (rad)": phi.ravel().tolist(),
-                "Vitesses mesurées (rad/s)": dphi.ravel().tolist(),
-                "TCP_Trajectoire": robot.last_X_mes.ravel().tolist(),
-            }
-
-            try:
-                data_queue.put(packet, block=False)
-            except:
-                pass  # Queue pleine, on ignore pour rester en temps réel
-
+                try:
+                    data_queue.put(packet, block=False)
+                except:
+                    pass  # Queue pleine, on ignore pour rester en temps réel
         # --- SYNCHRONISATION TEMPORELLE ---
         while time.perf_counter() < next_tick:
             pass
