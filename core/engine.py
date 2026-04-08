@@ -3,6 +3,7 @@ Ce module contient la boucle de contrôle principale du robot, qui lit les donn�
 """
 
 import os
+import queue
 import time
 from typing import Union
 
@@ -110,7 +111,7 @@ def run_robot(data_queue=None, stop_event=None):
 
                 try:
                     data_queue.put(packet, block=False)
-                except:
+                except queue.Full:
                     pass  # Queue pleine, on ignore pour rester en temps réel
         # --- SYNCHRONISATION TEMPORELLE ---
         while time.perf_counter() < next_tick:

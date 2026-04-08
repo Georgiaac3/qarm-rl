@@ -3,7 +3,6 @@ Point d'entrée du programme. Lance le processus de contrôle du robot et l'inte
 """
 
 import multiprocessing as mp
-from typing import Any
 
 from core.engine import run_robot
 from ui.dashboard import RealTimeApp
@@ -11,7 +10,7 @@ from ui.dashboard import RealTimeApp
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
 
-    data_queue = mp.Queue()
+    data_queue = mp.Queue(maxsize=100)
     stop_event = mp.Event()
 
     process_run_robot = mp.Process(target=run_robot, args=(data_queue, stop_event))
