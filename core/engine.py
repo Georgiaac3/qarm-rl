@@ -49,13 +49,13 @@ def run_robot(data_queue=None, stop_event=None):
     robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
 
     # Creating missions
-    ## Mission 1 : Se déplacer à une position donnée
+    # Mission 1 : Se déplacer à une position donnée
     waypoint1 = Waypoint(
         position=np.array([0.3, 0.0, 0.2]).reshape(3, 1),
         velocity=None,
         acceleration=None,
     )
-    robot.missions.put(MultiTrajectoryMission(waypoint1))
+    robot.missions.append(MultiTrajectoryMission(waypoint1))
 
     next_tick = time.perf_counter() + settings.timestep
 
@@ -107,12 +107,13 @@ def run_robot(data_queue=None, stop_event=None):
             packet = {
                 "Angles Articulations mesurés (rad)": phi.ravel().tolist(),
                 "Vitesses mesurées (rad/s)": dphi.ravel().tolist(),
+                "PWM envoyés": robot.last_pwm,
                 "TCP_Trajectoire": robot.last_X_mes.ravel().tolist(),
             }
 
             try:
                 data_queue.put(packet, block=False)
-            except:
+            except Exception:
                 pass  # Queue pleine, on ignore pour rester en temps réel
 
         # --- SYNCHRONISATION TEMPORELLE ---

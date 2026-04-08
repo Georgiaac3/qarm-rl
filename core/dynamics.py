@@ -8,12 +8,14 @@ import numpy as np
 
 # Constante de l'accélération gravitationnelle
 g = 9.80665
-Bv = np.array(
-    [[0.2119, 0.0457, 0.001, 0.008]]
-).T  # Viscous coefficients // TODO : voir si on trouve mieux la c'était en commentaire du fichier avec toute la dynamique
-Bc = np.array(
-    [[0.0838, 0.6701, 0.6156, 0.0275]]
-).T  # Coulomb coefficients // TODO : voir si on trouve mieux la c'était en commentaire du fichier avec toute la dynamique
+Bv = np.array([[0.1516, 0.0443, 0.001, 0.0182]]).T  # Coefficients de friction visqueuse (N.m.s/rad)
+# Bv = np.array(
+#    [[0.2119, 0.0457, 0.001, 0.008]]
+# ).T  # Viscous coefficients // TODO : voir si on trouve mieux la c'était en commentaire du fichier avec toute la dynamique
+Bc = np.array([[0.2150, 0.43, 0.4799, 0.0307]]).T  # Coefficients de friction de Coulomb (N.m)
+# Bc = np.array(
+#    [[0.0838, 0.6701, 0.6156, 0.0275]]
+# ).T  # Coulomb coefficients // TODO : voir si on trouve mieux la c'était en commentaire du fichier avec toute la dynamique
 Valim = 12.0  # Tension d'alimentation du moteur (V)
 R = 1 / (12 / 4.4)  # Resistance électrique du moteur (Ohm)
 ktGR = 1.5 * 10.6 / 4.4
@@ -100,7 +102,6 @@ def get_inertia_matrix(q, mL=0):
     s23 = np.sin(q[1, 0] + q[2, 0])
     c23 = np.cos(q[1, 0] + q[2, 0])
     s3 = np.sin(q[2, 0])
-    c3 = np.cos(q[2, 0])
 
     M11 = (
         I1A
@@ -169,7 +170,6 @@ def get_centrifugal_matrix(q):
     c2 = np.cos(q[1, 0])
     s23 = np.sin(q[1, 0] + q[2, 0])
     c23 = np.cos(q[1, 0] + q[2, 0])
-    s3 = np.sin(q[2, 0])
     c3 = np.cos(q[2, 0])
 
     # Calcul des coefficients
@@ -228,7 +228,6 @@ def get_coriolis_matrix(q):
     c2 = np.cos(q[1, 0])
     s23 = np.sin(q[1, 0] + q[2, 0])
     c23 = np.cos(q[1, 0] + q[2, 0])
-    s3 = np.sin(q[2, 0])
     c3 = np.cos(q[2, 0])
 
     # Calcul des coefficients

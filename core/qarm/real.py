@@ -2,7 +2,7 @@ import logging
 import socket
 import struct
 import time
-from queue import Queue
+from collections import deque
 from typing import Optional
 
 import cv2
@@ -22,14 +22,18 @@ class QARMReal(QARMInterface):
     """Implémentation pour le bras robotique réel avec communication UDP et caméra RealSense."""
 
     def __init__(self):
-        # Connexion UDP
+        #################
+        # Connexion UDP #
+        #################
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", settings.udp_port_recv))
         self.sock.setblocking(False)
 
         self.last_packet = None  # (0.0,) * 8 -> 4 first coordonnates for the angles, 4 last coordonnates for speeds
 
-        # Caméra avec RealSense
+        #########################
+        # Caméra avec RealSense #
+        #########################
         # self.pipeline = rs.pipeline()
         # config = rs.config()
         # config.enable_stream(
@@ -48,10 +52,14 @@ class QARMReal(QARMInterface):
         # )
         # self.pipeline.start(config)
 
-        # Missiions à exécuter
-        self.missions = Queue()
+        ############
+        # Missions #
+        ############
+        self.missions = deque()
 
-        # PID gains et damping pour l'inversion du Jacobien
+        #######
+        # PID #
+        #######
         self.I3 = np.eye(3)  # Matrice identité 3x3 pré-allouée pour le calcul du Jacobien
         self.Kp = np.diag(
             [0, 0, 0]
@@ -61,8 +69,11 @@ class QARMReal(QARMInterface):
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.lambda_damping = 0.05  # Facteur de damping pour l'inversion du Jacobien
 
-        # Stockage de la dernière position mesurée pour l'affichage dans l'interface graphique
+        ########################################
+        # Affichage dans l'interface graphique #
+        ########################################
         self.last_X_mes: Optional[NDArray[np.float64]] = None
+        self.last_pwm: Optional[list] = None
 
     # -------------------- Lecture angles --------------------
     def read_angles(self):
@@ -99,10 +110,13 @@ class QARMReal(QARMInterface):
             logging.info("Connection reset by peer")
 
     # -------------------- Envoi commandes --------------------
-    def send_speeds(self, v: list, grip: float) -> None:
+    def send_speeds(self, v: list) -> None:
         try:
-            message_bytes = struct.pack("ddddd", v[0], v[1], v[2], v[3], grip)
+            message_bytes = struct.pack(
+                "ddddd", v[0], v[1], v[2], v[3], v[4]
+            )  # 4 vitesses + 1 commande de préhension
             self.sock.sendto(message_bytes, (settings.udp_ip, settings.udp_port_send))
+            self.last_pwm = v  # Stockage de la dernière commande PWM envoyée pour l'affichage dans l'interface graphique
         except (OSError, struct.error) as e:
             logging.error("Erreur UDP envoi: %s", e)
 
@@ -130,7 +144,9 @@ class QARMReal(QARMInterface):
         )
         connexion = False
         while not connexion:
-            self.send_speeds([0.0, -0.1, -0.1, 0.0], 0)
+            self.send_speeds(
+                [0.0, -0.1, -0.1, 0.0, 0.0]
+            )  # Envoi de commandes de vitesse nulle pour initier la communication
             self.update_packet()
             angles = self.read_angles()
             if angles is not None:
@@ -152,7 +168,7 @@ class QARMReal(QARMInterface):
         Empile une mission de stationnarité pour que le robot reste immobile à sa position actuelle.
         """
         waiting_mission = StationaryMission()
-        self.missions.put(waiting_mission)
+        self.missions.append(waiting_mission)
         while waiting_mission.ini_waypoint is None:
             print("En attente de la position actuelle du robot pour renseigner ini_waypoint...")
             self.update_packet()
@@ -312,32 +328,33 @@ class QARMReal(QARMInterface):
         dX_mes = J @ dq_mes
 
         # Si aucune mission, rester stationnaire -> cela ajoute une mission de stationnarité à la queue
-        if self.missions.empty():
+        if len(self.missions) == 0:
             self.init_stationnary()
 
         # Récupération de la prochaine mission (la plus ancienne ajoutée)
-        current_mission = self.missions.queue[0]
+        current_mission = self.missions[0]
 
         if current_mission.start_time is not None:
             should_finish = current_mission.finish_condition(
                 t - current_mission.start_time, Waypoint(position=X_mes, velocity=dX_mes)
             )
             if should_finish:
-                self.missions.get()  # Retirer la mission terminée de la queue
-                if not self.missions.empty():
-                    current_mission = self.missions.queue[0]  # Passer à la mission suivante
-                else:
+                self.missions[0].say_goodbye()  # Message de fin de mission
+                self.missions.popleft()  # Retirer la mission terminée de la queue
+                if len(self.missions) == 0:
                     self.init_stationnary()  # Si plus de mission, rester stationnaire
+                current_mission = self.missions[0]  # Passer à la mission suivante
 
         if current_mission.start_time is None:
             current_mission.start_time = t
             current_mission.set_ini_waypoint(Waypoint(position=X_mes, velocity=dX_mes))
+            current_mission.say_hello()
 
         ############################
         # Traitement de la mission #
         ############################
 
-        ## Calcul du PWM a envoyer au robot pour suivre la trajectoire définie par la mission à l'instant t
+        # Calcul du PWM a envoyer au robot pour suivre la trajectoire définie par la mission à l'instant t
         # 1. Obtenir le waypoint de consigne à l'instant t
         waypoint_desired = current_mission.get_waypoint_at_t(t - current_mission.start_time)
         X_des = waypoint_desired.position
@@ -362,6 +379,6 @@ class QARMReal(QARMInterface):
             q_mes, dq_mes, ddq_cmd, mL
         )  # Convertir les accélérations commandées en commandes de couple (PWM)
 
-        self.send_speeds(
-            tau_cmd.ravel().tolist(), 0
-        )  # Envoi des commandes de vitesse (PWM) au robot
+        pwm_cmd = tau_cmd.ravel().tolist() + [0.0]  # Convertir en liste pour l'envoi UDP
+
+        self.send_speeds(pwm_cmd)  # Envoi des commandes de vitesse (PWM) au robot

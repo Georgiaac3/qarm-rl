@@ -3,7 +3,6 @@ Point d'entrée du programme. Lance le processus de contrôle du robot et l'inte
 """
 
 import multiprocessing as mp
-from typing import Any
 
 from core.engine import run_robot
 from ui.dashboard import RealTimeApp

@@ -56,14 +56,15 @@ class Settings(BaseSettings):
             "Joint_3_mes",
             "Joint_4_mes",
         ],
-        "Vitesses mesurées (rad/s)": ["Speed_1_mes", "Speed_2_mes", "Speed_3_mes", "Speed_4_mes"],
+        # "Vitesses mesurées (rad/s)": ["Speed_1_mes", "Speed_2_mes", "Speed_3_mes", "Speed_4_mes"],
+        "PWM envoyés": ["PWM_1_cmd", "PWM_2_cmd", "PWM_3_cmd", "PWM_4_cmd", "Grip_cmd"],
     }
     graphs_3d: List[str] = ["TCP_Trajectoire"]
 
     # ========================================================================
     # AUTRES PARAMÈTRES
     # ========================================================================
-    expected_data_size: int = 32  # 4 angles * 8 octets par double
+    expected_data_size: int = 40  # 5 valeurs * 8 octets par double
     log_file: str = "robot_log.csv"  # Fichier de log des données
 
 
