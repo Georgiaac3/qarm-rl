@@ -31,8 +31,10 @@ def test_camera_connection():
         frame_rate_buffer = []
         fps_avg_len = 30
         frame_id = 0
-        last_detection = None
-        DETECTION_EVERY = 3
+        last_detections = []
+        last_detection_time = 0
+        PERSIST_TIME = 0.5  # seconds
+        DETECTION_EVERY = 10
 
         while True:
             t_start = time.perf_counter()
@@ -43,24 +45,30 @@ def test_camera_connection():
             color_frame, depth_frame = frames
             display_frame = to_numpy(color_frame).copy()
 
-            # Détection non bloquante toutes les N frames
-            detection = None
+            detections = []
+            current_time = time.time()
+
             if frame_id % DETECTION_EVERY == 0:
                 try:
-                    detection = robot.camera.detect_object(color_frame, depth_frame)
-                    if detection is not None:
-                        last_detection = detection
-                        coords, confidence, (u, v) = last_detection
-                        logger.info(f"[DETECTION] Pixel: ({u},{v}), Confidence: {confidence:.2f}, XYZ: {coords}")
+                    detections = robot.camera.get_detections(color_frame)
+                    if detections:
+                        last_detections = detections
+                        last_detection_time = current_time
+                        logger.info(f"DETECTIONS: {detections}")
                 except Exception as e:
                     logger.warning(f"Detection error: {e}")
+            
+            if current_time - last_detection_time < PERSIST_TIME:
+                for detection in last_detections:
+                    xmin, ymin, xmax, ymax = detection["bbox"]
+                    label = detection["label"]
+                    conf = detection["confidence"]
 
-            # Affiche la dernière détection
-            if last_detection is not None:
-                coords, confidence, (u, v) = last_detection
-                cv2.circle(display_frame, (u, v), 5, (0, 0, 255), -1)
-                cv2.putText(display_frame, f"Conf: {confidence:.2f}", (u + 10, v),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    cv2.rectangle(display_frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+
+                    text = f"{label} {conf:.2f}"
+                    cv2.putText(display_frame, text, (xmin, ymin - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             # Calcul FPS
             t_stop = time.perf_counter()

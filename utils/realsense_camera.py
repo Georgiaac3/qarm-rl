@@ -18,7 +18,7 @@ class RealsenseCamera:
 
     def __init__(
         self,
-        model_path: str = "models/yolo_model.pt",
+        model_path: str = "yolo11m.pt",
         confidence_threshold: float = 0.85,
         camera_width: int = 640,
         camera_height: int = 480,
@@ -39,14 +39,9 @@ class RealsenseCamera:
         self.camera_width = camera_width
         self.camera_height = camera_height
         self.fps = fps
-
-        # Verify model exists
-        if not os.path.exists(model_path):
-            logger.error(f"Model file not found: {model_path}")
-            sys.exit(1)
-
+        
         # Load YOLO model
-        self.model = YOLO(model_path, task='detect')
+        self.model = YOLO(model_path)
         logger.info("YOLO model loaded successfully")
 
         # Initialize RealSense pipeline
@@ -155,13 +150,13 @@ class RealsenseCamera:
         results = self.model(frame, verbose=False)
         detections = results[0].boxes
 
-        for det in detections:
-            conf = det.conf.item()
+        for detection in detections:
+            conf = detection.conf.item()
             if conf < self.confidence_threshold:
                 continue
 
             # Get bounding box
-            xyxy = det.xyxy.cpu().numpy().squeeze().astype(int)
+            xyxy = detection.xyxy.cpu().numpy().squeeze().astype(int)
             xmin, ymin, xmax, ymax = xyxy
 
             # Calculate center pixel
@@ -180,7 +175,47 @@ class RealsenseCamera:
             return np.array(point_3d), conf, (u, v)
 
         return None
+    
+    def get_detections(self, frame: np.ndarray):
+        """
+        Run YOLO detection and return all bounding boxes with labels.
 
+        Args:
+            frame: input image
+
+        Returns:
+            List of dict:
+            [
+                {
+                    "label": str,
+                    "confidence": float,
+                    "bbox": (xmin, ymin, xmax, ymax)
+                }
+            ]
+        """
+        results = self.model(frame, verbose=False)
+        detections = results[0].boxes
+
+        output = []
+        for detection in detections:
+            conf = float(detection.conf[0])
+            if conf < self.confidence_threshold:
+                continue
+
+            # bbox
+            xmin, ymin, xmax, ymax = detection.xyxy[0].cpu().numpy().astype(int)
+
+            # class
+            cls_id = int(detection.cls[0])
+            label = self.model.names[cls_id]
+
+            output.append({
+                "label": label,
+                "confidence": conf,
+                "bbox": (xmin, ymin, xmax, ymax)
+            })
+
+        return output
 
     def cleanup(self) -> None:
         """Stop camera thread and clean up resources."""
