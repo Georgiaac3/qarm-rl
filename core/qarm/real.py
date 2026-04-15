@@ -24,7 +24,7 @@ class QARMReal(QARMInterface):
 
         # Initialize RealSense camera with YOLO object detection
         self.camera = RealsenseCamera(
-            model_path="yolo11m.pt",
+            model_path=settings.yolo_model,
             confidence_threshold=0.85,
             camera_width=settings.camera_width,
             camera_height=settings.camera_height,

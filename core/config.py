@@ -67,4 +67,6 @@ class Settings(BaseSettings):
     log_file: str = "robot_log.csv"  # Fichier de log des données
 
 
+    yolo_model: str = "yolo11m.pt"
+
 settings = Settings()

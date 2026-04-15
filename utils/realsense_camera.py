@@ -1,6 +1,5 @@
 from utils.logger import logger
-import os
-import sys
+from core.config import settings
 from typing import Optional, Tuple, List
 import threading
 import queue
@@ -18,7 +17,7 @@ class RealsenseCamera:
 
     def __init__(
         self,
-        model_path: str = "yolo11m.pt",
+        model_path: str = settings.yolo_model,
         confidence_threshold: float = 0.85,
         camera_width: int = 640,
         camera_height: int = 480,
