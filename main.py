@@ -1,46 +1,25 @@
-import time
-from venv import logger
-import numpy as np
+"""
+Point d'entrée du programme. Lance le processus de contrôle du robot et l'interface de visualisation en temps réel.
+"""
 
-from core.config import MODE, settings
-from core.qarm.real import QARMReal
-from core.qarm.sim import QARMSim
+import multiprocessing as mp
 
-
-def get_qarm_interface():
-    """Factory pour obtenir l'interface du bras robotique selon le mode sélectionné."""
-    if settings.mode == MODE.SIM:
-        return QARMSim()
-    return QARMReal()
-
-
-def run_robot(robot: QARMReal):
-    """ne sert que pour le QARMReal, Gazebo gère déjà la boucle pour QARMSim, on implémente donc le dt de 0.002 s ici"""
-
-    robot.connect()
-
-    #target_angles = np.array([-3*np.pi/4, 0.1, -np.pi/3, np.pi/2])
-    target_angles = np.array([0, 0, -np.pi/2, np.pi/3])
-
-    while True:
-        robot.update_packet()
-        angles = robot.read_angles()
-        speeds = robot.read_speeds()
-
-        if angles is None or speeds is None:
-            time.sleep(settings.timestep)
-            continue
-
-        current_angles = np.array(angles)
-        current_speeds = np.array(speeds)
-
-        order = robot.go_to_position_PID(target_angles, current_angles, current_speeds)
-
-        robot.send_speeds(order.tolist(), 1)
-        
-        # Attendre 2 ms
-        time.sleep(settings.timestep)
+from core.engine import run_robot
+from ui.dashboard import RealTimeApp
 
 if __name__ == "__main__":
-    qarm = get_qarm_interface()
-    run_robot(qarm)
+    mp.set_start_method("spawn", force=True)
+
+    data_queue = mp.Queue(maxsize=100)
+    stop_event = mp.Event()
+
+    process_run_robot = mp.Process(target=run_robot, args=(data_queue, stop_event))
+    process_run_robot.start()
+
+    try:
+        app = RealTimeApp(data_queue)
+        app.run()
+    finally:
+        stop_event.set()
+        process_run_robot.join()
+        print("Programme arrêté proprement.")

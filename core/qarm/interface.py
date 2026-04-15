@@ -1,3 +1,7 @@
+"""
+Interface commune pour simulation ou robot réel.
+"""
+
 from abc import ABC, abstractmethod
 
 
@@ -5,7 +9,7 @@ class QARMInterface(ABC):
     """Interface commune pour simulation ou robot réel."""
 
     @abstractmethod
-    def send_speeds(self, v, grip):
+    def send_speeds(self, v):
         """Envoyer commandes vitesse + pince"""
 
     @abstractmethod
