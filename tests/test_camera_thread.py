@@ -10,7 +10,6 @@ from core.qarm.real import QARMReal
 from utils.logger import logger
 
 def to_numpy(frame):
-    """Convert RealSense frame → numpy array si nécessaire"""
     if frame is None:
         return None
     if isinstance(frame, np.ndarray):
@@ -42,7 +41,7 @@ def test_camera_connection():
             if frames is None:
                 continue
 
-            color_frame, depth_frame = frames
+            color_frame, _ = frames
             display_frame = to_numpy(color_frame).copy()
 
             detections = []
@@ -70,7 +69,6 @@ def test_camera_connection():
                     cv2.putText(display_frame, text, (xmin, ymin - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            # Calcul FPS
             t_stop = time.perf_counter()
             fps = 1.0 / (t_stop - t_start)
             frame_rate_buffer.append(fps)
@@ -80,7 +78,7 @@ def test_camera_connection():
             cv2.putText(display_frame, f"FPS: {avg_fps:.1f}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-            # Affichage
+            # Display
             cv2.imshow("Camera Thread Test", display_frame)
 
             # Quit
