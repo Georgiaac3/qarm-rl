@@ -40,3 +40,10 @@ class Waypoint:
         # Vérification des dimensions (Shape)
         if value.shape != (3, 1):
             raise ValueError(f"{name} doit avoir la forme (3, 1), actuelle : {value.shape}")
+
+
+@dataclass
+class DoNothing:
+    """Classe informant que la mission est de ne rien faire, utilisée pour les missions DoNothingUntilConditionMission."""
+
+    pass

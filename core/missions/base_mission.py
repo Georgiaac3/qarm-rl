@@ -44,11 +44,11 @@ class Mission(ABC):
 
     @abstractmethod
     def set_ini_waypoint(self, waypoint: Waypoint):
-        """Permet de définir le waypoint initial de la mission, nécessaire pour toutes les missions."""
+        """Permet de définir le waypoint initial de la mission, nécessaire pour toutes les missions, à part celle de ne rien faire."""
 
     @abstractmethod
     def get_waypoint_at_t(self, t: float) -> Waypoint:
-        """Retourne le point de consigne (position, vitesse, accélération) à l'instant t."""
+        """Retourne le point de consigne (position, vitesse, accélération) à l'instant t ou DoNothing."""
 
     def say_hello(self):
         """Message de bienvenue spécifique à la mission, peut être utilisé pour indiquer le début d'une nouvelle phase de la tâche."""

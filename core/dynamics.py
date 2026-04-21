@@ -65,7 +65,7 @@ m1 = 0.7906
 m2 = 0.4591
 m3 = 0.269
 m4 = 0.257
-mL = 0.5  # Masse de la charge utile (peut être ajustée selon la mission)
+# mL = 0  # Masse de la charge utile (peut être ajustée selon la mission)
 
 
 def transform_angles(phi, phi_d, phi_dd):
@@ -156,7 +156,7 @@ def get_inertia_matrix(q, mL=0):
     return M
 
 
-def get_centrifugal_matrix(q):
+def get_centrifugal_matrix(q, mL=0):
     """
     Calcule la matrice centrifuge (C) du bras robotique.
     q: angles utilisés pour les calculs dynamiques
@@ -214,7 +214,7 @@ def get_centrifugal_matrix(q):
     return C
 
 
-def get_coriolis_matrix(q):
+def get_coriolis_matrix(q, mL=0):
     """
     Calcule la matrice de Coriolis (B) du bras robotique.
     q: angles utilisés pour les calculs dynamiques
@@ -282,6 +282,9 @@ def get_coriolis_matrix(q):
     )
 
     return B
+
+
+"""Fonction vérifiée."""
 
 
 def get_gravity_vector(q, mL=0):
@@ -358,21 +361,35 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     """
     # 1. Calcul des matrices et vecteurs dynamiques à partir des angles géométriques mesurés
     M = get_inertia_matrix(q_geo_mes, mL)
-    C = get_centrifugal_matrix(q_geo_mes)
+    C = get_centrifugal_matrix(q_geo_mes, mL)
     G = get_gravity_vector(q_geo_mes, mL)
-    B = get_coriolis_matrix(q_geo_mes)
+    B = get_coriolis_matrix(q_geo_mes, mL)
 
     friction = get_friction(dq_geo_mes)
 
     B_signals = get_coriolis_velocity_signals(dq_geo_mes)
 
+    # print("vitesses mesurées et accélérations commandées:", dq_geo_mes.ravel(), ddq_geo_cmd.ravel())
+
     # 2. Calcul du torque total à appliquer
-    tau_cmd = M @ ddq_geo_cmd + B @ B_signals + C @ dq_geo_mes**2 + G + friction
+    # tau_cmd = M @ ddq_geo_cmd
+    # tau_cmd += B @ B_signals
+    # tau_cmd +=C @ dq_geo_mes**2
+    tau_cmd = G
+    # tau_cmd += friction
+
+    return tau_cmd
+
+    # print(dq_geo_mes.ravel())
 
     # 3. Conversion du torque en signal de tension (V) à envoyer au moteur
-    Vcmd = (R / ktGR) * tau_cmd + kvGR * dq_geo_mes
+    Vcmd = (R / ktGR) * tau_cmd  # + kvGR * dq_geo_mes
+
+    # mutliply by 2 the voltage command of the first motor because there are 2 motors in parallel for the first joint
+    ####Vcmd[0, 0] *= 2
 
     # 4. Normalisation du signal de tension entre -1 et 1
-    PWM = np.clip(Vcmd / Valim, -1, 1)
+    # pwm = np.clip(Vcmd / (10 * Valim), -1, 1)
+    pwm = np.clip(Vcmd / Valim, -1, 1)
 
-    return PWM
+    return pwm

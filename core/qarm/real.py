@@ -15,7 +15,7 @@ from core.config import settings
 from core.dynamics import get_pwm, l1, l2, l3, transform_angles
 from core.missions.stationary_mission import StationaryMission
 from core.qarm.interface import QARMInterface
-from utils.types import Waypoint
+from utils.types import DoNothing, Waypoint
 
 
 class QARMReal(QARMInterface):
@@ -61,11 +61,11 @@ class QARMReal(QARMInterface):
         # PID #
         #######
         self.I3 = np.eye(3)  # Matrice identité 3x3 pré-allouée pour le calcul du Jacobien
-        self.Kp = np.diag(
-            [0, 0, 0]
+        self.Kp = 0 * np.diag(
+            [1, 1, 1]
         )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Kd = np.diag(
-            [0, 0, 0]
+        self.Kd = 0 * np.diag(
+            [1, 1, 1]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.lambda_damping = 0.05  # Facteur de damping pour l'inversion du Jacobien
 
@@ -169,18 +169,18 @@ class QARMReal(QARMInterface):
         """
         waiting_mission = StationaryMission()
         self.missions.append(waiting_mission)
-        while waiting_mission.ini_waypoint is None:
-            print("En attente de la position actuelle du robot pour renseigner ini_waypoint...")
-            self.update_packet()
-            angles_phi = self.read_angles()
-            if angles_phi is not None:
-                q_mes, _, _ = transform_angles(
-                    np.array(angles_phi).reshape(4, 1), np.zeros((4, 1)), np.zeros((4, 1))
-                )
-                X_mes = self.forward_kinematics(q_mes)
-                waiting_mission.ini_waypoint = Waypoint(position=X_mes)
-            time.sleep(0.01)
-        print("Mission de stationnarité initialisée avec la position actuelle du robot.")
+        # while waiting_mission.ini_waypoint is None:
+        #    print("En attente de la position actuelle du robot pour renseigner ini_waypoint...")
+        #    self.update_packet()
+        #    angles_phi = self.read_angles()
+        #    if angles_phi is not None:
+        #        q_mes, _, _ = transform_angles(
+        #            np.array(angles_phi).reshape(4, 1), np.zeros((4, 1)), np.zeros((4, 1))
+        #        )
+        #        X_mes = self.forward_kinematics(q_mes)
+        #        waiting_mission.ini_waypoint = Waypoint(position=X_mes)
+        #    time.sleep(0.01)
+        print("Mission de stationnarité initialisée")  # avec la position actuelle du robot.")
 
     ####
     # -------------------- Contrôle en position --------------------
@@ -319,6 +319,10 @@ class QARMReal(QARMInterface):
                 "phi_mes et dphi_mes doivent être des vecteurs colonne de dimension (4, 1)"
             )
 
+        # Suppression du bruit autour de 0 : pour que le robot puisse rester immobile sans que les petites fluctuations de mesure ne génèrent des commandes de mouvement
+        dphi_mes = np.where(np.abs(dphi_mes) < 0.005, 0, dphi_mes)
+        print("Vitesses mesurées (après suppression du bruit):", dphi_mes.ravel())
+
         # Position et vitesses articulaires et cartésiennes mesurées
         q_mes, dq_mes, _ = transform_angles(phi_mes, dphi_mes, np.zeros_like(phi_mes))
 
@@ -357,6 +361,13 @@ class QARMReal(QARMInterface):
         # Calcul du PWM a envoyer au robot pour suivre la trajectoire définie par la mission à l'instant t
         # 1. Obtenir le waypoint de consigne à l'instant t
         waypoint_desired = current_mission.get_waypoint_at_t(t - current_mission.start_time)
+
+        if waypoint_desired is DoNothing:
+            self.send_speeds(
+                [0.0, 0.0, 0.0, 0.0, 0.0]
+            )  # Commande de vitesse nulle pour ne rien faire
+            return
+
         X_des = waypoint_desired.position
         dX_des = waypoint_desired.velocity
         ddX_des = waypoint_desired.acceleration
@@ -375,10 +386,10 @@ class QARMReal(QARMInterface):
         mL = (
             current_mission.load if current_mission.load is not None else 0.0
         )  # Charge utile, à intégrer dans la dynamique
-        tau_cmd = get_pwm(
+        pwm_cmd = get_pwm(
             q_mes, dq_mes, ddq_cmd, mL
         )  # Convertir les accélérations commandées en commandes de couple (PWM)
 
-        pwm_cmd = tau_cmd.ravel().tolist() + [0.0]  # Convertir en liste pour l'envoi UDP
+        pwm_cmd = pwm_cmd.ravel().tolist() + [0.0]  # Convertir en liste pour l'envoi UDP
 
         self.send_speeds(pwm_cmd)  # Envoi des commandes de vitesse (PWM) au robot

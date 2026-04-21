@@ -69,15 +69,15 @@ def run_robot(data_queue=None, stop_event=None):
     n = 0
     b = 0
     while True:
-        if n >= 1000:  # Affiche le taux de boucle toutes les 1000 itérations
-            mem = process.memory_info().rss / 1024 / 1024  # RAM en Mo
-            print(
-                f"Fréquence erreur: {b/n:.6f} Hz - {b} erreurs sur {n} itérations - RAM utilisée : {mem:.2f} Mo"
-            )
-            b = 0
-            n = 0
+        # if n >= 1000:  # Affiche le taux de boucle toutes les 1000 itérations
+        #    mem = process.memory_info().rss / 1024 / 1024  # RAM en Mo
+        #    print(
+        #        f"Fréquence erreur: {b/n:.6f} Hz - {b} erreurs sur {n} itérations - RAM utilisée : {mem:.2f} Mo"
+        #    )
+        #    b = 0
+        #    n = 0
 
-        n += 1
+        # n += 1
 
         # --- LOGIQUE DE CONTRÔLE DU ROBOT ---
         robot.update_packet()
@@ -88,17 +88,17 @@ def run_robot(data_queue=None, stop_event=None):
             phi = np.array(phi).reshape(4, 1)
             dphi = np.array(dphi).reshape(4, 1)
 
-            t_start_update = time.perf_counter()
+            # t_start_update = time.perf_counter()
             robot.update(time.perf_counter(), phi, dphi)
-            t_end_update = time.perf_counter()
-            t_update = t_end_update - t_start_update
-            if t_update > settings.timestep:
-                print(
-                    f"⚠️  Alerte timing : update a pris {t_update:.5f} s, dépassant la période de {settings.timestep:.5f} s"
-                )
+            # t_end_update = time.perf_counter()
+            # t_update = t_end_update - t_start_update
+            # if t_update > settings.timestep:
+            #    print(
+            #        f"⚠️  Alerte timing : update a pris {t_update:.5f} s, dépassant la période de {settings.timestep:.5f} s"
+            #    )
 
-        if time.perf_counter() >= next_tick:
-            b += 1
+        # if time.perf_counter() >= next_tick:
+        #    b += 1
 
         # --- ENVOI DES DONNÉES POUR VISUALISATION/LOGGING ---
         if data_queue is not None:
@@ -113,6 +113,7 @@ def run_robot(data_queue=None, stop_event=None):
                     data_queue.put(packet, block=False)
                 except queue.Full:
                     pass  # Queue pleine, on ignore pour rester en temps réel
+
         # --- SYNCHRONISATION TEMPORELLE ---
         while time.perf_counter() < next_tick:
             pass

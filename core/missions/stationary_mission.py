@@ -5,6 +5,7 @@ Module contenant la classe StationaryMission, qui représente une mission où le
 import numpy as np
 
 from core.missions.base_mission import Mission
+from utils.types import Waypoint
 
 
 class StationaryMission(Mission):
@@ -27,8 +28,15 @@ class StationaryMission(Mission):
 
     def set_ini_waypoint(self, waypoint):
         """Permet de définir le waypoint initial de la mission, nécessaire pour toutes les missions."""
-        self.check_waypoint_validity(waypoint)
-        self.ini_waypoint = waypoint
+        # self.check_waypoint_validity(waypoint)
+        # self.ini_waypoint = waypoint
+        new_waypoint = Waypoint(
+            position=waypoint.position,
+            velocity=np.array([0.0, 0.0, 0.0]).reshape(3, 1),
+            acceleration=np.array([0.0, 0.0, 0.0]).reshape(3, 1),
+        )
+        print("Setting initial waypoint for StationaryMission:", new_waypoint)
+        self.ini_waypoint = new_waypoint
 
     def get_waypoint_at_t(self, t):
         """Retourne un waypoint avec la position actuelle du robot et des vitesses/accélérations nulles."""
@@ -40,7 +48,10 @@ class StationaryMission(Mission):
         """Vérifie que le waypoint est valide pour une mission de stationnarité (vitesses et accélérations nulles)."""
         if waypoint is None:
             raise ValueError("Waypoint ne peut pas être None pour une mission de stationnarité.")
-        if waypoint.velocity is not None and not np.allclose(waypoint.velocity, 0):
+        if waypoint.velocity is not None and not np.allclose(waypoint.velocity, 0, atol=0.05):
+            print("Waypoint velocity:", waypoint.velocity)
             raise ValueError("Pour une mission de stationnarité, la vitesse doit être nulle.")
-        if waypoint.acceleration is not None and not np.allclose(waypoint.acceleration, 0):
+        if waypoint.acceleration is not None and not np.allclose(
+            waypoint.acceleration, 0, atol=0.05
+        ):
             raise ValueError("Pour une mission de stationnarité, l'accélération doit être nulle.")
