@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!-- Description du robot QARM -->
+
+<robot name="QARM">
+
+    <link name="world" />
+
+    <joint name="world_base_joint" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0" />
+        <parent link="world" />
+        <child link="base_link" />
+    </joint>
+
+    <link name="base_link">
+    <!-- Valeur issue du document 7. Dynamic Parameters -->
+        <inertial>
+            <origin xyz="0.000529200576288575 -2.23307396420992E-06 0.0267852902177001" rpy="0 0 0" />
+            <mass value="3.89847036294307" />
+            <inertia ixx="0.0259717926187233" ixy="7.41706820354147E-07" ixz="-9.20327430275286E-08" iyy="0.0237418182185852" iyz="6.90408382921997E-11" izz="0.048730018421969" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/base_link.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="0.75 0.75 0.75 1" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/base_link.STL" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="YAW" type="revolute">
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <parent link="base_link" />
+        <child link="YAW" />
+        <axis xyz="0 0 1" />
+        <limit lower="-2.967" upper="2.967" effort="100.0" velocity="1.57" />
+        <dynamics damping="0.2" friction="0.1" />
+    </joint>
+
+    <link name="YAW">
+    <!-- Articulation yaw -> correspond à l'axe de rotation de la base autour de z -->
+        <inertial>
+            <!-- Valeur issue du document 7. Dynamic Parameters -->
+            <origin xyz="9.37418676855843E-09 -3.48810780368004E-09 0.115813977186301" rpy="0 0 0" />
+            <mass value="0.7906" />
+            <inertia ixx="1.556E-03" ixy="0.0" ixz="0.0" iyy="1.489E-03" iyz="0.0" izz="9.624E-04" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/YAW.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="0.75 0.75 0.75 1" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/YAW.STL" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="SHOULDER" type="revolute">
+        <origin xyz="0 0 0.1397714" rpy="-1.5707963267949 0 0" />
+        <parent link="YAW" />
+        <child link="BICEP" />
+        <axis xyz="0 0 1" />
+        <limit lower="-1.483" upper="1.483" effort="100.0" velocity="1.57" />
+    </joint>
+
+    <link name="BICEP">
+    <!-- Articulation shoulder -->
+        <inertial>
+            <!-- Valeur issue du document 7. Dynamic Parameters -->
+            <origin xyz="0.0136584263393359 -0.234778864037209 -7.06001931450219E-05" rpy="0 0 0" />
+            <mass value="0.4591" />
+            <inertia ixx="1.922E-04" ixy="0.0" ixz="0.0" iyy="9.541E-03" iyz="0.0" izz="9.610E-03" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/BICEP.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/BICEP.STL" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="ELBOW" type="revolute">
+        <origin xyz="0.0500000000000004 -0.350000000000015 0" rpy="0 0 -1.42889927219074" />
+        <parent link="BICEP" />
+        <child link="FOREARM" />
+        <axis xyz="0 0 1" />
+        <limit lower="-1.658" upper="1.309" effort="100.0" velocity="1.57" />
+    </joint>
+
+    <link name="FOREARM">
+    <!-- Articulation elbow -->
+        <inertial>
+            <!-- Valeur issue du document 7. Dynamic Parameters -->
+            <origin xyz="0.0372712542033594 0.155357218514742 0.000271723941997439" rpy="0 0 0" />
+            <mass value="0.269" />
+            <inertia ixx="2.069E-03" ixy="0.0" ixz="0.0" iyy="1.976E-03" iyz="0.0" izz="2.679E-04" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/FOREARM.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/FOREARM.STL" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="WRIST" type="revolute">
+        <origin xyz="0.0336611536380097 0.235607569369425 0" rpy="-1.5707963267949 0 -0.141897054604159" />
+        <parent link="FOREARM" />
+        <child link="END_EFFECTOR" />
+        <axis xyz="0 0 1" />
+        <limit lower="-2.792" upper="2.792" effort="100.0" velocity="1.57" />
+    </joint>
+
+    <!-- ATTENTION CECI N'EST PAS L'END EFFECTOR REEL DU ROBOT QARM, la masse totale correspond néanmoins à la masse de l'end effector réel -->
+    <!-- Masse et inertie redistributées depuis dynamics.py (m4=0.257 kg redistributed proportionally) -->
+    <link name="END_EFFECTOR">
+        <inertial>
+            <origin xyz="-7.14013714436801E-05 -0.0502 0.0057237846257307" rpy="0 0 0" />
+            <mass value="0.0428" />
+            <inertia ixx="2.314e-05" ixy="0" ixz="0" iyy="2.314e-05" iyz="0" izz="4.114e-05" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/END_EFFECTOR.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://QARM/meshes/END_EFFECTOR.STL" />
+            </geometry>
+        </collision>
+    </link>
+    <joint name="GRIPPER_BASE_JOINT" type="fixed">
+        <origin xyz="0 0 0.012" rpy="0 0 0" />
+        <parent link="END_EFFECTOR" />
+        <child link="GRIPPER_BASE" />
+    </joint>
+    
+    
+    <link name="GRIPPER_BASE">
+        <visual>
+            <origin xyz="-0.0175 0 0.03" rpy="0 0 0" />
+            <geometry><box size="0.065 0.08 0.06" /></geometry>
+            <material name="Black"><color rgba="0.1 0.1 0.1 1" /></material>
+        </visual>
+        <collision>
+            <origin xyz="-0.0175 0 0.03" rpy="0 0 0" />
+            <geometry><box size="0.065 0.08 0.06" /></geometry>
+        </collision>
+        <inertial>
+            <mass value="0.1286" />
+            <inertia ixx="5.656e-05" ixy="0" ixz="0" iyy="1.371e-05" iyz="0" izz="4.799e-05" />
+            <origin xyz="-0.0225 -0.0502 0.02" rpy="0 0 0" />
+        </inertial>
+    </link>
+
+    <joint name="FINGER_MASTER_JOINT" type="prismatic">
+        <origin xyz="0 0.02 0.0725" rpy="0 0 0" />
+        <parent link="GRIPPER_BASE" />
+        <child link="FINGER_LEFT" />
+        <axis xyz="0 1 0" />
+        <dynamics damping="0.5" friction="0.1"/> 
+        <limit lower="-0.01" upper="0.03" effort="20" velocity="0.5" />
+    </joint>
+
+    <link name="FINGER_LEFT">
+        <visual>
+            <origin xyz="0 0 0.03" rpy="0 0 0" />
+            <geometry><box size="0.01 0.01 0.085" /></geometry>
+            <material name="Grey"><color rgba="0.5 0.5 0.5 1" /></material>
+        </visual>
+        <collision>
+        <origin xyz="0 0 0.03" rpy="0 0 0" />
+        <geometry>
+            <box size="0.01 0.01 0.06" />
+        </geometry>
+        <surface>
+            <friction>
+            <ode>
+                <mu>100.0</mu>
+                <mu2>100.0</mu2>
+                <slip1>0.0</slip1>
+                <slip2>0.0</slip2>
+                
+            </ode>
+            </friction>
+            <contact>
+            <ode>
+                <kp>1000000.0</kp> <kd>1.0</kd>       </ode>
+            </contact>
+        </surface>
+        </collision>
+        <inertial>
+            <mass value="0.0428" />
+            <inertia ixx="1.286e-05" ixy="0" ixz="0" iyy="1.286e-05" iyz="0" izz="8.57e-07" />
+            <origin xyz="0 -0.0502 0.03" rpy="0 0 0" />
+        </inertial>
+    </link>
+
+    <joint name="FINGER_MIMIC_JOINT" type="prismatic">
+        <origin xyz="0 -0.02 0.0725" rpy="0 0 0" />
+        <parent link="GRIPPER_BASE" />
+        <child link="FINGER_RIGHT" />
+        <axis xyz="0 -1 0" />
+        <limit lower="-0.01" upper="0.03" effort="20" velocity="0.5" />
+        <mimic joint="FINGER_MASTER_JOINT" multiplier="1" offset="0" />
+        <dynamics damping="0.5" friction="0.1"/>
+    </joint>
+
+    <link name="FINGER_RIGHT">
+        <visual>
+            <origin xyz="0 0 0.03" rpy="0 0 0" />
+            <geometry><box size="0.01 0.01 0.085" /></geometry>
+            <material name="Grey"><color rgba="0.5 0.5 0.5 1" /></material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0.03" rpy="0 0 0" />
+            <geometry><box size="0.01 0.01 0.085" /></geometry>
+            <surface>
+            <friction>
+            <ode>
+                <mu>100.0</mu>
+                <mu2>100.0</mu2>
+                <slip1>0.0</slip1>
+                <slip2>0.0</slip2>
+            </ode>
+            </friction>
+            <contact>
+            <ode>
+                <kp>1000000.0</kp> <kd>1.0</kd>       </ode>
+            </contact>
+        </surface>
+        </collision>
+        <inertial>
+            <mass value="0.0428" />
+            <inertia ixx="1.286e-05" ixy="0" ixz="0" iyy="1.286e-05" iyz="0" izz="8.57e-07" />
+            <origin xyz="0 -0.0502 0.03" rpy="0 0 0" />
+        </inertial>
+    </link>
+
+    <!-- Définitions des interfaces pour permettre le contrôle des articulations par les contrôleurs, une interface par articulation -->
+    <transmission name="trans_finger_master">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="FINGER_MASTER_JOINT">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="motor_finger_master">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission>
+
+    <transmission name="YAW_transmission">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="YAW">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="YAW_motor">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission>
+    <transmission name="shoulder_transmission">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="SHOULDER">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="SHOULDER_motor">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission>
+    <transmission name="elbow_transmission">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="ELBOW">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="ELBOW_motor">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission>
+    <transmission name="wrist_transmission">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="WRIST">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="WRIST_motor">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission>
+
+
+
+    <transmission name="trans_FINGER_MIMIC_JOINT">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="FINGER_MIMIC_JOINT">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="FINGER_MIMIC_JOINT_motor">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission>
+
+
+    <!-- Définissions des capteurs supplémentaires, caméra RGB et de profondeur, par l'endroit où ils sont montés, le format vidéo, la FOV etc... -->
+    <link name="camera_mount">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0.001"/>
+            <inertia ixx="1e-6" iyy="1e-6" izz="1e-6" ixy="0" ixz="0" iyz="0"/>
+        </inertial>
+    </link>
+
+    <joint name="camera_mount_joint" type="fixed">
+        <parent link="FOREARM"/>
+        <child link="camera_mount"/>
+        <origin xyz="0.03366 0.255 0.08" rpy="0 0 0"/>
+    </joint>
+
+    <link name="camera_optical"/>
+
+    <joint name="camera_optical_joint" type="fixed">
+        <parent link="camera_mount"/>
+        <child link="camera_optical"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="camera_mount">
+        <sensor name="qarm_camera_sensor" type="camera">
+            <update_rate>30.0</update_rate>
+            <pose>0 0 0 1.5708 0 1.5708</pose>
+            <camera name="qarm_camera">
+                <horizontal_fov>1.518436449</horizontal_fov> # 87 degrees in radians
+                <image>
+                    <width>640</width>
+                    <height>480</height>
+                    <format>R8G8B8</format>
+                </image>
+                <clip>
+                    <near>0.1</near>
+                    <far>5.0</far>
+                </clip>
+            </camera>
+
+            <plugin name="qarm_camera_controller" filename="libgazebo_ros_camera.so">
+                <alwaysOn>true</alwaysOn>
+                <updateRate>30.0</updateRate>
+                <cameraName>qarm_camera</cameraName>
+                <imageTopicName>image_raw</imageTopicName>
+                <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+                <frameName>camera_optical</frameName>
+            </plugin>
+        </sensor>
+
+        <sensor name="qarm_depth_sensor" type="depth">
+            <!-- Same pose as RGB camera -->
+            <pose>0 0 0 1.5708 0 1.5708</pose>
+            <update_rate>30</update_rate>
+
+            <camera>
+                <horizontal_fov>1.518436449</horizontal_fov>
+                <image>
+                    <width>640</width>
+                    <height>480</height>
+                </image>
+                <clip>
+                    <near>0.1</near>
+                    <far>5.0</far>
+                </clip>
+            </camera>
+
+            <plugin name="qarm_depth_controller" filename="libgazebo_ros_depth_camera.so">
+                <robotNamespace>/qarm_camera</robotNamespace>
+                <cameraName>qarm_depth</cameraName>
+                <frameName>camera_optical</frameName>
+                <min_depth>0.1</min_depth>
+                <max_depth>100.0</max_depth>
+                <cameraInfoTopicName>depth/camera_info</cameraInfoTopicName>
+                <depthImageTopicName>depth/depth_image</depthImageTopicName>
+            </plugin>
+        </sensor>
+    </gazebo>
+
+    <!-- Définition des plugins Gazebo -->
+    <gazebo>
+        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+            <robotNamespace>/</robotNamespace>
+        </plugin>
+    </gazebo>
+
+</robot>

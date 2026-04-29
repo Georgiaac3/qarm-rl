@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!-- 
+Motor and actuator parameters for QARM robot
+Based on dynamics.py parameters
+-->
+
+<robot name="QARM_motors">
+    
+    <!-- Motor Parameters -->
+    <!-- This file documents motor/actuator specifications extracted from dynamics.py -->
+    
+    <!-- Electrical Parameters -->
+    <transmission name="motor_electrical_params">
+        <!-- Supply voltage: 12.0 V -->
+        <!-- Motor resistance: R = 1/(12/4.4) = 0.3667 Ohm -->
+        <!-- Torque constant: ktGR = 1.5 * 10.6 / 4.4 = 3.6136 N.m/A -->
+        <!-- Velocity constant: kvGR = 12 / (30 * 2π / 60) = 3.8197 V/(rad/s) -->
+    </transmission>
+
+    <!-- Friction Parameters for Joint YAW (Index 0) -->
+    <transmission name="YAW_friction_params">
+        <!-- Bv (viscous friction): 0.1516 N.m.s/rad -->
+        <!-- Bc (Coulomb friction): 0.2150 N.m -->
+    </transmission>
+
+    <!-- Friction Parameters for Joint SHOULDER (Index 1) -->
+    <transmission name="SHOULDER_friction_params">
+        <!-- Bv (viscous friction): 0.0443 N.m.s/rad -->
+        <!-- Bc (Coulomb friction): 0.43 N.m -->
+    </transmission>
+
+    <!-- Friction Parameters for Joint ELBOW (Index 2) -->
+    <transmission name="ELBOW_friction_params">
+        <!-- Bv (viscous friction): 0.001 N.m.s/rad -->
+        <!-- Bc (Coulomb friction): 0.4799 N.m -->
+    </transmission>
+
+    <!-- Friction Parameters for Joint WRIST (Index 3) -->
+    <transmission name="WRIST_friction_params">
+        <!-- Bv (viscous friction): 0.0182 N.m.s/rad -->
+        <!-- Bc (Coulomb friction): 0.0307 N.m -->
+    </transmission>
+
+    <!-- Additional Motor Specifications -->
+    <!-- Maximum angular velocity: π/2 rad/s (90 deg/s) -->
+    <!-- Control interface: EffortJointInterface (torque/force control) -->
+    <!-- Default load limit: 100.0 N.m per joint -->
+    
+    <!-- Gravity: 9.80665 m/s² (standard) -->
+    <!-- Payload mass (mL): Configurable, default 0 kg -->
+    
+</robot>
