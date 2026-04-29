@@ -4,7 +4,6 @@ Simple 2-DOF planar manipulator: Shoulder (q1) + Elbow (q2)
 """
 
 from typing import Tuple
-
 import numpy as np
 
 
@@ -80,21 +79,17 @@ class Arm2D:
     ) -> Tuple[np.ndarray, bool]:
         """
         Compute inverse kinematics using analytical solution.
-
-        For a 2D planar arm, analytical solution exists.
-        Uses: law of cosines + atan2
+        Chooses the solution closest to q_init to avoid unnecessary rotations.
 
         Args:
             target: Target position [x, y]
-            q_init: Initial guess (optional, for elbow-up/down ambiguity)
+            q_init: Initial guess (optional, for selecting closest solution)
 
         Returns:
             q: Joint angles [q1, q2]
             success: Boolean indicating if solution exists
         """
         x, y = target[0], target[1]
-
-        # Distance from base to target
         d = np.sqrt(x**2 + y**2)
 
         # Check if target is reachable
@@ -103,22 +98,31 @@ class Arm2D:
 
         # Law of cosines: compute q2 (elbow angle)
         cos_q2 = (d**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        cos_q2 = np.clip(cos_q2, -1.0, 1.0)  # Numerical stability
+        cos_q2 = np.clip(cos_q2, -1.0, 1.0)
 
-        # Choose elbow-up configuration (positive q2)
-        q2 = np.arccos(cos_q2)
+        # Two solutions for elbow (up and down)
+        q2_positive = np.arccos(cos_q2)
+        q2_negative = -np.arccos(cos_q2)
 
-        # Compute q1 (shoulder angle)
-        alpha = np.arctan2(y, x)  # Angle to target
-        beta = np.arctan2(self.l2 * np.sin(q2), self.l1 + self.l2 * np.cos(q2))
-        q1 = alpha - beta
+        # For each q2, compute q1
+        alpha = np.arctan2(y, x)
+        
+        solutions = []
+        for q2_candidate in [q2_positive, q2_negative]:
+            beta = np.arctan2(self.l2 * np.sin(q2_candidate), 
+                            self.l1 + self.l2 * np.cos(q2_candidate))
+            q1_candidate = alpha - beta
+            q = np.array([q1_candidate, q2_candidate], dtype=np.float32)
+            q = np.clip(q, self.q_min, self.q_max)
+            solutions.append(q)
 
-        q = np.array([q1, q2], dtype=np.float32)
-
-        # Ensure within bounds
-        q = np.clip(q, self.q_min, self.q_max)
-
-        return q, True
+        # Choose solution closest to q_init
+        if q_init is not None:
+            distances = [np.sum((sol - q_init) ** 2) for sol in solutions]
+            best_idx = np.argmin(distances)
+            return solutions[best_idx], True
+        else:
+            return solutions[0], True
 
     def velocity_ik(self, x_dot: np.ndarray, q: np.ndarray) -> np.ndarray:
         """
@@ -140,7 +144,3 @@ class Arm2D:
         q_dot = J_pinv @ x_dot
         return q_dot
 
-    def is_within_workspace(self, target: np.ndarray) -> bool:
-        """Check if target is within workspace."""
-        d = np.linalg.norm(target)
-        return d <= (self.l1 + self.l2) and d >= abs(self.l1 - self.l2)

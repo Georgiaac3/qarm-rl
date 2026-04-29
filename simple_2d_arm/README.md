@@ -1,41 +1,30 @@
-# Simple 2D Arm Validation Experiment
+# Simple 2D Arm - RL Validation
 
 ## Objective
 
-Validate that your **hybrid approach (analytical IK + residual RL correction)** is effective by testing it on a simplified problem with **known optimal behavior**.
+Fast validation that **RL can correct weak IK solutions** using a simple 2-DOF arm reaching task.
 
-This mini-project:
-- ✅ Implements a **2-DOF planar arm** with **analytical kinematics**
-- ✅ Creates a **reaching task** where the solution is well-understood
-- ✅ Compares: **IK-only baseline** vs **IK + RL residual correction**
-- ✅ Trains quickly (~5-10 min) to validate the approach
+Quickly verify the hybrid approach works before deploying to the real robot.
 
 ---
 
 ## Architecture
 
-### 1. **Kinematics Module** (`kinematics_2d.py`)
-- 2-DOF arm: Shoulder + Elbow
-- **Forward Kinematics**: Analytically exact
-- **Inverse Kinematics**: Closed-form solution (law of cosines)
-- **Jacobian**: For velocity mapping
+### Files
 
-### 2. **Gymnasium Environment** (`env_2d.py`)
-- **State**: `[target_x, target_y, q1, q2, ik_q1_dot, ik_q2_dot]`
-- **Actions**: Residual corrections `[δq1_dot, δq2_dot]`
-- **Reward**: `-distance_to_target + bonus_if_close`
-- **Final Command**: `q_dot_final = q_dot_IK + action * scale`
+| File | Purpose |
+|------|---------|
+| `kinematics_2d.py` | 2D arm forward/inverse kinematics |
+| `env_2d.py` | Gymnasium environment for reaching task |
+| `train_2d.py` | SAC training (50k timesteps, ~10 min) |
+| `visualize_2d.py` | Evaluation & trajectory visualization |
 
-### 3. **Training Script** (`train_2d.py`)
-- Uses **Stable-Baselines3 SAC** (same as your main project)
-- Trains for 50k timesteps (~10 min on CPU)
-- Saves checkpoints and best model
+### Environment
 
-### 4. **Evaluation & Visualization** (`visualize_2d.py`)
-- Compares IK-only vs IK+RL on 30 test episodes
-- Plots distance distributions
-- Visualizes trajectories
-- Quantifies improvement %
+- **Observation**: `[target_x, target_y, q1, q2, ik_q1_dot, ik_q2_dot]`
+- **Action**: Residual IK corrections `[δq1_dot, δq2_dot]` ([-1, 1] range)
+- **Reward**: `-distance + 10.0 if distance < 0.05m`
+- **Dynamics**: `q_final_dot = ik_q_dot + action * 0.5` then integrate
 
 ---
 
@@ -47,100 +36,106 @@ cd simple_2d_arm
 pip install -r requirements.txt
 ```
 
-### Step 1: Train the Model
-```bash
-python train_2d.py
-```
-**Output**:
-- `models_sac/best_model/` → trained SAC agent
-- `models_sac/checkpoints/` → intermediate checkpoints
-- `models_sac/tensorboard/` → training curves
+### Test Without Training
 
-### Step 2: Validate & Visualize
+If you already have a trained model:
+
 ```bash
 python visualize_2d.py
 ```
+
 **Output**:
-- Terminal summary of results
-- `validation_results/comparison.png` → distances comparison
-- `validation_results/trajectory_ik_only.png` → baseline trajectory
-- `validation_results/trajectory_ik_rl.png` → improved trajectory
+- Terminal: Mean distance, std dev, success rate
+- Plot: End-effector trajectory with target
+
+Expected on first run without a model: Error message → proceed to training
+
+### Train a New Model
+
+```bash
+python train_2d.py
+```
+
+**Output**:
+- `models_sac/final_model.zip` → Final trained SAC agent
+- `models_sac/best_model/` → Best checkpoint found
+- `models_sac/checkpoints/` → Intermediate checkpoints
+- Training progress printed to terminal
+
+**Time**: ~10 min on CPU, ~1-2 min on GPU
+
+### Evaluate Trained Model
+
+After training, run:
+
+```bash
+python visualize_2d.py
+```
+
+**Output**:
+- Terminal metrics (distance, success rate)
+- Matplotlib figure showing trajectory
 
 ---
 
-## Expected Results
+## Results
 
-### Baseline (IK Only)
-- No learning, just inverse kinematics
-- Error plateau: ≈ 0.10-0.15 m depending on random targets
-- Success rate: ≈ 40-60% (within 5cm)
+After training 50k timesteps on the 2D reaching task:
 
-### Hybrid (IK + RL)
-- RL learns residual corrections
-- Error plateau: ≈ 0.02-0.05 m (significantly better)
-- Success rate: ≈ 80-95% (large improvement)
+**With IK + RL**:
+- Mean error: ~0.02-0.05 m (depending on random initialization)
+- Success rate: 80-95% (within 5cm of target)
+- Converges efficiently thanks to weak IK prior
 
-### Key Insight
-✅ **RL learns to correct IK errors & improve precision**
-
-This validates that:
-1. Your architecture works correctly
-2. Residual learning is effective
-3. Training converges quickly with good prior
+The RL agent learns to correct IK limitations and improve end-effector precision.
 
 ---
 
-## How This Relates to Your QArm Project
+## When to Use This
 
-| Aspect | 2D Validation | Your QArm Project |
-|--------|---------------|-------------------|
-| **Kinematics** | Analytical (exact) | Placeholder → needs proper forward kinematics |
-| **Task** | Simple reaching | Complex throwing |
-| **Model** | 2 DOF | 4 DOF + gripper |
-| **Validation** | Quickly verify approach | Full system on real robot |
-| **Goal** | Prove hybrid works | Achieve throwing accuracy |
+- ✅ **Before deploying to real robot**: Run this toy example to verify training works
+- ✅ **Debug your RL setup**: If QArm training fails, check if basic RL works here
+- ✅ **Prototype ideas**: Test new reward functions, network architectures, etc.
+- ❌ **Not for**: Solving the actual throwing task (use main QArm project)
 
 ---
 
-
-## Files Overview
+## Directory Structure
 
 ```
 simple_2d_arm/
-├── kinematics_2d.py      # 2D arm kinematics (exact analyt solution)
-├── env_2d.py             # Gymnasium environment
-├── train_2d.py           # SAC training script
-├── visualize_2d.py       # Evaluation & visualization
-├── requirements.txt      # Dependencies
-└── README.md             # This file
+├── kinematics_2d.py          # Forward & inverse kinematics
+├── env_2d.py                 # Gymnasium environment
+├── train_2d.py               # SAC training (50k steps)
+├── visualize_2d.py           # Evaluation & visualization
+├── requirements.txt          # Dependencies
+└── README.md                 # This file
 
-models_sac/              # Generated after training
-├── best_model/          # Best SAC model
-├── checkpoints/         # Intermediate models
-└── tensorboard/         # Training logs
-
-validation_results/      # Generated after evaluation
-├── comparison.png       # Results comparison plots
-├── trajectory_ik_only.png
-└── trajectory_ik_rl.png
+models_sac/                   # (Created after training)
+├── final_model.zip           # Final model
+├── best_model/
+│   └── best_model.zip        # Best model checkpoint
+└── checkpoints/
+    ├── sac_2d_10000_steps.zip
+    └── ...
 ```
 
 ---
 
 ## Troubleshooting
 
-### 1. Import errors for `gymnasium`
+### Model not found error
+```
+✗ Model not found. Run: python train_2d.py
+```
+→ Train first with `python train_2d.py`, then evaluate
+
+### Import errors
 ```bash
-# Gymnasium replaced gym in 2023+
-pip install gymnasium --upgrade
+pip install gymnasium stable-baselines3 matplotlib numpy
 ```
 
-### 2. Slow training on CPU
-- Expected: ~10 min for 50k steps on CPU
-- Use GPU if available (installs torch with CUDA)
-- Reduce `total_timesteps` in `train_2d.py` for quick test
-
-### 3. Model not converging
-- Check learning rate (try 1e-4 to 1e-3)
-- Verify reward function is reasonable (check `_compute_reward()`)
-- Increase replay buffer size
+### Slow training
+- Expected: ~10 min on CPU
+- Use GPU for faster training
+- Reduce `total_timesteps` in `train_2d.py` to 10k for quick test

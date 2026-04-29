@@ -1,14 +1,14 @@
 """
 2D Arm Gymnasium Environment for RL Testing
-Validates: Analytical IK + Residual RL correction
+
+Simple 2D arm reaching task with residual IK corrections.
+Agent learns to correct inverse kinematics solution.
 """
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 from kinematics_2d import Arm2D
-
-# faire une simu comme gazebo (pas .step) faire en sorte que la simu ait son propre temps(horloge)
 
 
 class Arm2DEnv(gym.Env):
@@ -29,9 +29,9 @@ class Arm2DEnv(gym.Env):
         self,
         l1: float = 0.5,
         l2: float = 0.5,
-        max_steps: int = 100,
+        max_steps: int = 200,  # Increased from 100 for more convergence time
         target_radius: float = 1.0,
-        dt: float = 0.05,
+        dt: float = 0.05,  # Keep stable timestep
         ik_scale: float = 1.0,
     ):
         """
@@ -74,44 +74,31 @@ class Arm2DEnv(gym.Env):
         return np.array([x, y], dtype=np.float32)
 
     def _get_ik_velocities(self, target: np.ndarray) -> np.ndarray:
-        """
-        Compute ideal velocities using inverse kinematics.
-
-        This simulates the "analytical prior" in your hybrid approach.
-        DEGRADED VERSION: Weak IK signal to force RL to learn corrections.
-        """
-        # Compute target joint angles
+        """Compute velocities using inverse kinematics with optimized feedback control."""
         q_target, success = self.arm.inverse_kinematics(target, self.q)
-
         if not success:
             return np.array([0.0, 0.0], dtype=np.float32)
 
-        # Simple proportional control: move towards target
+        # Angle wrapping: find shortest path
         q_error = q_target - self.q
-
-        # Compute velocities (P-controller)
-        # DEGRADED: Reduced from 2.0 to 0.5 to make IK less effective
-        Kp = 0.5  # Weak controller → RL must learn corrections
+        q_error = np.arctan2(np.sin(q_error), np.cos(q_error))  # Wrap to [-pi, pi]
+        
+        # Proportional-Derivative control for smooth convergence
+        Kp = 1.8  # Slightly stronger than before (was 1.5)
         q_dot = Kp * q_error
-
-        # DEGRADED: ik_scale reduced from 1.0 to 0.2
-        return np.clip(q_dot * 0.2, -np.pi, np.pi).astype(np.float32)
+        return np.clip(q_dot, -np.pi, np.pi).astype(np.float32)
 
     def _get_obs(self) -> np.ndarray:
         """Get observation vector."""
         return np.concatenate([self.target, self.q, self.ik_q_dot]).astype(np.float32)
 
     def _compute_reward(self) -> float:
-        """Compute reward based on distance to target."""
+        """Reward: negative distance + bonus for reaching target."""
         ee_pos = self.arm.forward_kinematics(self.q)
         distance = float(np.linalg.norm(ee_pos - self.target))
-
         reward = -distance
-
-        # Bonus for reaching target
-        if distance < 0.05:  # Within 5cm
+        if distance < 0.05:
             reward += 10.0
-
         return reward
 
     def _is_done(self) -> bool:

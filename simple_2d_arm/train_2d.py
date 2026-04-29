@@ -5,7 +5,6 @@ Uses Stable-Baselines3 SAC algorithm
 
 from pathlib import Path
 
-import numpy as np
 from env_2d import Arm2DEnv
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
@@ -14,14 +13,7 @@ from stable_baselines3.common.monitor import Monitor
 
 def make_env(seed=None):
     """Create and wrap environment."""
-    env = Arm2DEnv(
-        l1=0.5,
-        l2=0.5,
-        max_steps=100,
-        target_radius=1.0,
-        dt=0.05,
-        ik_scale=1.0,
-    )
+    env = Arm2DEnv(l1=0.5, l2=0.5, max_steps=100, target_radius=1.0, dt=0.05)
     env = Monitor(env)
     env.reset(seed=seed)
     return env
@@ -52,16 +44,10 @@ def train_sac(
         policy="MlpPolicy",
         env=env,
         learning_rate=learning_rate,
-        policy_kwargs={
-            "net_arch": [64, 64],  # Two hidden layers
-        },
+        policy_kwargs={"net_arch": [64, 64]},
         verbose=1,
-        tensorboard_log=None,  # Disabled for quick startup (install tensorboard if needed)
     )
-
-    print("Model created successfully")
-    print(f"Policy: {model.policy}")
-    print()
+    print(f"\nModel created - Policy: {model.policy}\n")
 
     # Create callbacks
     checkpoint_callback = CheckpointCallback(
@@ -87,7 +73,7 @@ def train_sac(
             total_timesteps=total_timesteps,
             callback=[checkpoint_callback, eval_callback],
             log_interval=10,
-            progress_bar=True,
+            progress_bar=False,
         )
         print("\n✓ Training completed successfully!")
 
