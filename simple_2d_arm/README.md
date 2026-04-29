@@ -43,7 +43,7 @@ This mini-project:
 
 ### Installation
 ```bash
-cd c:\Users\Thibault\Desktop\CS\Projet\ 3\simple_2d_arm
+cd simple_2d_arm
 pip install -r requirements.txt
 ```
 
@@ -102,23 +102,6 @@ This validates that:
 
 ---
 
-## Next Steps for Your QArm
-
-After validating on 2D arm:
-
-1. **Implement proper forward kinematics** for QArm
-   - Use DH parameters from your report (Appendix D.2)
-   - Or use PyBullet/MuJoCo for simulation
-
-2. **Test on QArm simulation** in Gazebo
-   - Replace placeholder `_get_end_effector_position()`
-   - Use same SAC + residual architecture
-
-3. **Transfer sim-to-real**
-   - Fine-tune on real QArm with 100-200 episodes
-   - Domain randomization if needed
-
----
 
 ## Files Overview
 
@@ -161,43 +144,3 @@ pip install gymnasium --upgrade
 - Check learning rate (try 1e-4 to 1e-3)
 - Verify reward function is reasonable (check `_compute_reward()`)
 - Increase replay buffer size
-
----
-
-## Modifications for Your QArm
-
-To adapt this to your full QArm project:
-
-1. **Replace 2D kinematics with real URDF/DH parameters**
-   ```python
-   # Instead of Arm2D, use:
-   - PyBullet + URDF
-   - Custom DH-based kinematics
-   - ROS TF if available
-   ```
-
-2. **Use same environment structure**
-   ```python
-   class QArmGymEnv:  # Same as your current code
-       # observation: [target, q_angles, q_velocities]
-       # action: residual_delta_q_dot
-       # reward: -distance + bonus
-   ```
-
-3. **Same SAC training loop**
-   ```python
-   model = SAC(policy="MlpPolicy", env=env)
-   model.learn(total_timesteps=...)
-   ```
-
----
-
-## References
-
-- **TossingBot** [1]: Hybrid model + residual learning (your reference)
-- **Stable-Baselines3**: https://stable-baselines3.readthedocs.io
-- **Gymnasium**: https://gymnasium.farama.org
-
----
-
-**Question**: Do you want to extend this to a **3D arm** or **directly apply to QArm simulation**?
