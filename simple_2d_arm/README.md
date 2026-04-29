@@ -51,7 +51,7 @@ pip install -r requirements.txt
 ```bash
 python train_2d.py
 ```
-**Output**: 
+**Output**:
 - `models_sac/best_model/` → trained SAC agent
 - `models_sac/checkpoints/` → intermediate checkpoints
 - `models_sac/tensorboard/` → training curves

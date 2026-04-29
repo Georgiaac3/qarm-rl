@@ -3,13 +3,13 @@ Training script for 2D Arm RL
 Uses Stable-Baselines3 SAC algorithm
 """
 
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+from env_2d import Arm2DEnv
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
-
-from env_2d import Arm2DEnv
 
 
 def make_env(seed=None):

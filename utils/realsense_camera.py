@@ -1,14 +1,16 @@
-from utils.logger import logger
 import os
-import sys
-from typing import Optional, Tuple, List
-import threading
 import queue
+import sys
+import threading
 import time
+from typing import List, Optional, Tuple
 
 import numpy as np
-from ultralytics import YOLO
 import pyrealsense2 as rs
+from ultralytics import YOLO
+
+from utils.logger import logger
+
 
 class RealsenseCamera:
     """
@@ -46,7 +48,7 @@ class RealsenseCamera:
             sys.exit(1)
 
         # Load YOLO model
-        self.model = YOLO(model_path, task='detect')
+        self.model = YOLO(model_path, task="detect")
         logger.info("YOLO model loaded successfully")
 
         # Initialize RealSense pipeline
@@ -66,8 +68,12 @@ class RealsenseCamera:
     def _initialize_pipeline(self) -> None:
         """Configure and start RealSense pipeline."""
         config = rs.config()
-        config.enable_stream(rs.stream.color, self.camera_width, self.camera_height, rs.format.bgr8, self.fps)
-        config.enable_stream(rs.stream.depth, self.camera_width, self.camera_height, rs.format.z16, self.fps)
+        config.enable_stream(
+            rs.stream.color, self.camera_width, self.camera_height, rs.format.bgr8, self.fps
+        )
+        config.enable_stream(
+            rs.stream.depth, self.camera_width, self.camera_height, rs.format.z16, self.fps
+        )
         self.pipeline.start(config)
         logger.info("RealSense pipeline started")
 
@@ -139,7 +145,9 @@ class RealsenseCamera:
             logger.error(f"Error retrieving frames: {e}")
             return None
 
-    def detect_object(self, frame: np.ndarray, depth_frame) -> Optional[Tuple[np.ndarray, float, Tuple[int, int]]]:
+    def detect_object(
+        self, frame: np.ndarray, depth_frame
+    ) -> Optional[Tuple[np.ndarray, float, Tuple[int, int]]]:
         """
         Detect object in frame using YOLO and retrieve 3D coordinates.
 
@@ -178,7 +186,6 @@ class RealsenseCamera:
             return np.array(point_3d), conf, (u, v)
 
         return None
-
 
     def cleanup(self) -> None:
         """Stop camera thread and clean up resources."""
