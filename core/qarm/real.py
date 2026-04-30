@@ -12,7 +12,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from core.config import settings
-from core.dynamics import get_pwm, l1, l2, l3, transform_angles
+from core.dynamics import get_pwm, get_trig_values, l1, l2, l3, transform_angles
 from core.missions.stationary_mission import StationaryMission
 from core.qarm.interface import QARMInterface
 from utils.types import DoNothing, Waypoint
@@ -61,6 +61,8 @@ class QARMReal(QARMInterface):
         # PID #
         #######
         self.I3 = np.eye(3)  # Matrice identité 3x3 pré-allouée pour le calcul du Jacobien
+        # self.Kp = np.diag([25, 25, 35])
+        # self.Kd = np.diag([10, 10, 12])
         self.Kp = 0 * np.diag(
             [1, 1, 1]
         )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
@@ -97,8 +99,24 @@ class QARMReal(QARMInterface):
         Le packet attendu est de 64 bytes, contenant 8 doubles (4 pour les angles, 4 pour les vitesses).
         """
 
+        last_received_data: bytes = b""
+        packets_cleared = 0
+
+        while True:
+            try:
+                # We actually receive (remove) the data here
+                data, _ = self.sock.recvfrom(1024)
+                last_received_data = data
+                packets_cleared += 1
+            except BlockingIOError:
+                # The buffer is finally empty
+                break
+
+        # print(packets_cleared)
+
         try:
-            data, _ = self.sock.recvfrom(1024)
+            # data, _ = self.sock.recvfrom(1024)
+            data = last_received_data
             if len(data) == 64:
                 self.last_packet = struct.unpack("8d", data)
             else:
@@ -197,12 +215,8 @@ class QARMReal(QARMInterface):
         if q.shape != (4, 1):
             raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
 
-        c1 = np.cos(q[0, 0])
-        s1 = np.sin(q[0, 0])
-        c2 = np.cos(q[1, 0])
-        s2 = np.sin(q[1, 0])
-        c23 = np.cos(q[1, 0] + q[2, 0])
-        s23 = np.sin(q[1, 0] + q[2, 0])
+        c1, s1, c2, s2, c3, s3, c23, s23 = get_trig_values(q)
+
         J = np.array(
             [
                 [-l2 * s1 * c2 + l3 * s1 * s23, -l2 * c1 * s2 - l3 * c1 * c23, -l3 * c1 * c23, 0],
@@ -229,12 +243,8 @@ class QARMReal(QARMInterface):
         dq2 = dq[1, 0]
         dq3 = dq[2, 0]
 
-        c1 = np.cos(q[0, 0])
-        s1 = np.sin(q[0, 0])
-        c2 = np.cos(q[1, 0])
-        s2 = np.sin(q[1, 0])
-        c23 = np.cos(q[1, 0] + q[2, 0])
-        s23 = np.sin(q[1, 0] + q[2, 0])
+        c1, s1, c2, s2, c3, s3, c23, s23 = get_trig_values(q)
+
         dJ = np.array(
             [
                 [
@@ -278,16 +288,33 @@ class QARMReal(QARMInterface):
         if q.shape != (4, 1):
             raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
 
-        c1 = np.cos(q[0, 0])
-        s1 = np.sin(q[0, 0])
-        c2 = np.cos(q[1, 0])
-        s2 = np.sin(q[1, 0])
-        c23 = np.cos(q[1, 0] + q[2, 0])
-        s23 = np.sin(q[1, 0] + q[2, 0])
-        x = l2 * c1 * c2 - l3 * c1 * s23
-        y = l2 * s1 * c2 - l3 * s1 * s23
+        c1, s1, c2, s2, c3, s3, c23, s23 = get_trig_values(q)
+
+        x = c1 * (l2 * c2 - l3 * s23)
+        y = s1 * (l2 * c2 - l3 * s23)
         z = l1 - l2 * s2 - l3 * c23
         return np.array([[x], [y], [z]])
+
+    # def forward_kinematics(self, q: NDArray[np.float64]) -> NDArray[np.float64]:
+    #     """
+    #     Calcule la position cartésienne de l'effecteur en fonction des angles articulaires q.
+    #     - q : vecteur colonne des angles articulaires de la dynamique géométrique (4,1)
+    #     - retourne : position cartésienne de l'effecteur (3,1)
+    #     - les paramètres géométriques du robot sont définis dans core/config.py
+    #     """
+    #     if q.shape != (4, 1):
+    #         raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
+
+    #     c1 = np.cos(q[0, 0])
+    #     s1 = np.sin(q[0, 0])
+    #     c2 = np.cos(q[1, 0])
+    #     s2 = np.sin(q[1, 0])
+    #     c23 = np.cos(q[1, 0] + q[2, 0])
+    #     s23 = np.sin(q[1, 0] + q[2, 0])
+    #     x = c1 * (l2 * s2 + l3 * c23)
+    #     y = s1 * (l2 * s2 + l3 * c23)
+    #     z = l1 + l2 * c2 - l3 * s23
+    #     return np.array([[x], [y], [z]])
 
     def update(
         self,
@@ -320,8 +347,7 @@ class QARMReal(QARMInterface):
             )
 
         # Suppression du bruit autour de 0 : pour que le robot puisse rester immobile sans que les petites fluctuations de mesure ne génèrent des commandes de mouvement
-        dphi_mes = np.where(np.abs(dphi_mes) < 0.005, 0, dphi_mes)
-        print("Vitesses mesurées (après suppression du bruit):", dphi_mes.ravel())
+        # dphi_mes = np.where(np.abs(dphi_mes) < 0.005, 0, dphi_mes)
 
         # Position et vitesses articulaires et cartésiennes mesurées
         q_mes, dq_mes, _ = transform_angles(phi_mes, dphi_mes, np.zeros_like(phi_mes))
@@ -381,15 +407,18 @@ class QARMReal(QARMInterface):
             J @ J.T + (self.lambda_damping**2) * self.I3
         )  # Pseudo-inverse avec damping
         ddq_cmd = J_dag @ (ddX_cmd - dJ @ dq_mes)  # Commande en accélération articulaire
+        # print("------------------------------------------------")
+        # print("dq_mes:", dq_mes.ravel(), "dphi_mes:", dphi_mes.ravel())
+        # print("ddX_cmd:", ddX_cmd.ravel(), "ddq_cmd:", ddq_cmd.ravel())
 
         # 4. Dynmique du bras et envoi des commandes pwwm
         mL = (
             current_mission.load if current_mission.load is not None else 0.0
         )  # Charge utile, à intégrer dans la dynamique
+
         pwm_cmd = get_pwm(
             q_mes, dq_mes, ddq_cmd, mL
         )  # Convertir les accélérations commandées en commandes de couple (PWM)
 
         pwm_cmd = pwm_cmd.ravel().tolist() + [0.0]  # Convertir en liste pour l'envoi UDP
-
         self.send_speeds(pwm_cmd)  # Envoi des commandes de vitesse (PWM) au robot

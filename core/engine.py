@@ -45,7 +45,7 @@ def run_robot(data_queue=None, stop_event=None):
     # Initializing the robot interface
     robot: Union[QARMReal, QARMSim] = get_qarm_interface()
 
-    # Connecting to the robot
+    # Connecting to the robot via udp
     robot.connect()
     robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
 
@@ -66,8 +66,8 @@ def run_robot(data_queue=None, stop_event=None):
         "#  Boucle de contrôle du robot  #\n"
         "################################"
     )
-    n = 0
-    b = 0
+    # n = 0
+    # b = 0
     while True:
         # if n >= 1000:  # Affiche le taux de boucle toutes les 1000 itérations
         #    mem = process.memory_info().rss / 1024 / 1024  # RAM en Mo

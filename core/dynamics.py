@@ -7,7 +7,7 @@ Based on code provided by Quanser
 import numpy as np
 
 # Constante de l'accélération gravitationnelle
-g = 9.80665
+g = 9.80665  # *0.9967
 Bv = np.array([[0.1516, 0.0443, 0.001, 0.0182]]).T  # Coefficients de friction visqueuse (N.m.s/rad)
 # Bv = np.array(
 #    [[0.2119, 0.0457, 0.001, 0.008]]
@@ -44,10 +44,17 @@ Ltotal = (
 dq_max = np.pi / 2  # Vitesse angulaire maximale (rad/s)
 
 # Paramètres dynamiques (Inerties et centres de masse)
-I1A, I1L = 1.489e-3, 1.0
+# I1A = 1.489e-3
+# I2A, I2L = 1.922e-4, 9.61e-3
+# I3A, I3L = 2.679e-4, 2.069e-3
+# I4A, I4L = 5.528e-4, 1.12e-3
+
+# innerties but inversed with what is on doc 7 (not the original one from the Quanser code)
+I1A = 1.489e-3
 I2A, I2L = 1.922e-4, 9.61e-3
-I3A, I3L = 2.679e-4, 2.069e-3
-I4A, I4L = 5.528e-4, 1.12e-3
+I3A, I3L = 2.069e-3, 2.679e-4
+I4A, I4L = 1.12e-3, 5.528e-4
+
 
 # lc1 = l1/3;
 # lc2 = l2/2;
@@ -68,6 +75,54 @@ m4 = 0.257
 # mL = 0  # Masse de la charge utile (peut être ajustée selon la mission)
 
 
+def get_trig_values(q):
+    """
+    Calcule les valeurs trigonométriques nécessaires pour les calculs dynamiques à partir des angles q déjà transformés depuis les angles mesurés pour le calcul de la dynamique.
+    q: angles utilisés pour les calculs dynamiques
+    Retourne c1, s1, c2, s2, c3, s3, c23, s23: les valeurs trigonométriques nécessaires pour les calculs dynamiques
+    """
+    c1 = np.cos(q[0, 0])
+    s1 = np.sin(q[0, 0])
+    c2 = np.cos(q[1, 0])
+    s2 = np.sin(q[1, 0])
+    c3 = np.cos(q[2, 0])
+    s3 = np.sin(q[2, 0])
+    c23 = np.cos(q[1, 0] + q[2, 0])
+    s23 = np.sin(q[1, 0] + q[2, 0])
+
+    return convert_trig_values(c1, s1, c2, s2, c3, s3, c23, s23)
+
+
+def convert_trig_values(c1, s1, c2, s2, c3, s3, c23, s23):
+    """
+    Convertit des valeurs trigonométriques de la convention old vers la convention new.
+
+    Retourne:
+        Une liste dans l'ordre (c1_new, s1_new, c2_new, s2_new, c3_new, s3_new, c23_new, s23_new).
+    """
+    # old -> new:
+    # c2_old = s2_new, s2_old = -c2_new
+    # c23_old = s23_new, s23_old = -c23_new
+    return [c1, s1, s2, -c2, c3, s3, s23, -c23]
+
+
+# def transform_angles(phi, phi_d, phi_dd):
+#     """
+#     Transforme les angles mesurés phi en angles q utilisés pour les calculs dynamiques.
+#     phi: array de taille 4 (angles mesurés)
+#     phi_d: array de taille 4 (vitesses angulaires mesurées)
+#     phi_dd: array de taille 4 (accélérations angulaires mesurées)
+#     Retourne q, dq, ddq: arrays de taille 4
+#     """
+#     if phi.shape != (4, 1) or phi_d.shape != (4, 1) or phi_dd.shape != (4, 1):
+#         raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
+
+#     q = phi - np.array([[0, np.pi / 2 - beta, beta, 0]]).T
+#     dq = phi_d
+#     ddq = phi_dd
+#     return q, dq, ddq
+
+
 def transform_angles(phi, phi_d, phi_dd):
     """
     Transforme les angles mesurés phi en angles q utilisés pour les calculs dynamiques.
@@ -79,7 +134,7 @@ def transform_angles(phi, phi_d, phi_dd):
     if phi.shape != (4, 1) or phi_d.shape != (4, 1) or phi_dd.shape != (4, 1):
         raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
 
-    q = phi - np.array([[0, np.pi / 2 - beta, beta, 0]]).T
+    q = phi + np.array([[0, beta, -beta, 0]]).T
     dq = phi_d
     ddq = phi_dd
     return q, dq, ddq
@@ -97,11 +152,7 @@ def get_inertia_matrix(q, mL=0):
     if q.shape != (4, 1):
         raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
 
-    s2 = np.sin(q[1, 0])
-    c2 = np.cos(q[1, 0])
-    s23 = np.sin(q[1, 0] + q[2, 0])
-    c23 = np.cos(q[1, 0] + q[2, 0])
-    s3 = np.sin(q[2, 0])
+    c1, s1, c2, s2, c3, s3, c23, s23 = get_trig_values(q)
 
     M11 = (
         I1A
@@ -166,11 +217,7 @@ def get_centrifugal_matrix(q, mL=0):
     if q.shape != (4, 1):
         raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
 
-    s2 = np.sin(q[1, 0])
-    c2 = np.cos(q[1, 0])
-    s23 = np.sin(q[1, 0] + q[2, 0])
-    c23 = np.cos(q[1, 0] + q[2, 0])
-    c3 = np.cos(q[2, 0])
+    c1, s1, c2, s2, c3, s3, c23, s23 = get_trig_values(q)
 
     # Calcul des coefficients
     C21 = -(
@@ -224,11 +271,7 @@ def get_coriolis_matrix(q, mL=0):
     if q.shape != (4, 1):
         raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
 
-    s2 = np.sin(q[1, 0])
-    c2 = np.cos(q[1, 0])
-    s23 = np.sin(q[1, 0] + q[2, 0])
-    c23 = np.cos(q[1, 0] + q[2, 0])
-    c3 = np.cos(q[2, 0])
+    c1, s1, c2, s2, c3, s3, c23, s23 = get_trig_values(q)
 
     # Calcul des coefficients
     B11 = (
@@ -284,7 +327,86 @@ def get_coriolis_matrix(q, mL=0):
     return B
 
 
-"""Fonction vérifiée."""
+# def get_gravity_vector(q, mL=0):
+#     """
+#     Calcule le vecteur de gravité (G) du bras robotique.
+#     q: angles utilisés pour les calculs dynamiques
+#     mL: masse de la charge utile
+#     """
+#     if q.shape != (4, 1):
+#         raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
+
+#     # Rappel des raccourcis trigonométriques
+#     c2 = np.cos(q[1, 0])
+#     s23 = np.sin(q[1, 0] + q[2, 0])
+
+#     # Calcul des composantes
+#     G2 = -g * (
+#         m2 * (l2 - lc2) * c2
+#         + m3 * (l2 * c2 - lc3 * s23)
+#         + m4 * (l2 * c2 - (l3 - lc4) * s23)
+#         + mL * (l2 * c2 - l3 * s23)
+#     )
+#     #beta = 0
+#     G2 = -g * (
+#         m2 * (l2 - lc2) * np.sin(q[1, 0] + beta)
+#         + m3 * (l2 * np.sin(q[1, 0] + beta) + lc3 * np.cos(q[1, 0]+q[2, 0]))
+#         + m4 * (l2 * np.sin(q[1, 0] + beta) + (l3 - lc4) * np.cos(q[1, 0]+q[2, 0]))
+#         + mL * (l2 * np.sin(q[1, 0] + beta) + l3 * np.cos(q[1, 0]+q[2, 0]))
+#     )
+
+#     G3 = g * (
+#         m3 * lc3 * s23
+#         + m4 * (l3 - lc4) * s23
+#         + mL * l3 * s23
+#     )
+
+#     G3 = -g * (
+#         m3 * lc3
+#         + m4 * (l3 - lc4)
+#         + mL * l3
+#     ) * np.cos(q[1, 0] + q[2, 0])
+
+#     #print(q[1, 0] + beta)
+
+#     #G3 = (-g * lc3 * m3 - g * (l3 - lc4) * m4)*np.cos(q[2, 0] + beta)
+
+#     # Assemblage du vecteur G (4x1)
+#     G = np.array([[0,
+#                    G2,
+#                    G3, 0]]).T
+#     return G
+
+# def get_gravity_vector(q, mL=0):
+#     """
+#     Calcule le vecteur de gravité (G) du bras robotique.
+#     q: angles utilisés pour les calculs dynamiques
+#     mL: masse de la charge utile
+#     """
+#     if q.shape != (4, 1):
+#         raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
+
+#     # Rappel des raccourcis trigonométriques
+#     s2 = np.sin(q[1, 0])
+#     c23 = np.cos(q[1, 0] + q[2, 0])
+
+#     # Calcul des composantes
+#     G2 = -g * (
+#         m2 * (l2 - lc2) * s2
+#         + m3 * (l2 * s2 + lc3 * c23)
+#         + m4 * (l2 * s2 + (l3 - lc4) * c23)
+#         + mL * (l2 * s2 + l3 * c23)
+#     )
+
+#     G3 = -g * (
+#         m3 * lc3
+#         + m4 * (l3 - lc4)
+#         + mL * l3
+#     ) * c23
+
+#     # Assemblage du vecteur G (4x1)
+#     G = np.array([[0, G2, G3, 0]]).T
+#     return G
 
 
 def get_gravity_vector(q, mL=0):
@@ -297,8 +419,7 @@ def get_gravity_vector(q, mL=0):
         raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
 
     # Rappel des raccourcis trigonométriques
-    c2 = np.cos(q[1, 0])
-    s23 = np.sin(q[1, 0] + q[2, 0])
+    c1, s1, c2, s2, c3, s3, c23, s23 = get_trig_values(q)
 
     # Calcul des composantes
     G2 = -g * (
@@ -372,11 +493,12 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     # print("vitesses mesurées et accélérations commandées:", dq_geo_mes.ravel(), ddq_geo_cmd.ravel())
 
     # 2. Calcul du torque total à appliquer
-    # tau_cmd = M @ ddq_geo_cmd
-    # tau_cmd += B @ B_signals
-    # tau_cmd +=C @ dq_geo_mes**2
-    tau_cmd = G
-    # tau_cmd += friction
+    tau_cmd = np.array([[0.0, 0.0, 0.0, 0.0]]).T
+    tau_cmd += M @ ddq_geo_cmd
+    tau_cmd += B @ B_signals
+    tau_cmd += C @ dq_geo_mes**2
+    tau_cmd += G
+    tau_cmd += friction
 
     return tau_cmd
 
@@ -386,7 +508,7 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     Vcmd = (R / ktGR) * tau_cmd  # + kvGR * dq_geo_mes
 
     # mutliply by 2 the voltage command of the first motor because there are 2 motors in parallel for the first joint
-    ####Vcmd[0, 0] *= 2
+    # Vcmd[0, 0] *= 2
 
     # 4. Normalisation du signal de tension entre -1 et 1
     # pwm = np.clip(Vcmd / (10 * Valim), -1, 1)
