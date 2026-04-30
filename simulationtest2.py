@@ -71,8 +71,7 @@ def counter_gravity():
 
 def torque(phi_mes):
     #q_mes, _, _ = transform_angles(phi_mes, np.zeros_like(phi_mes), np.zeros_like(phi_mes))
-    x = get_gravity_vector(phi_mes).reshape(4)
-    return x
+    return get_gravity_vector(phi_mes).reshape(4)
 
 
 qarm.set_dofs_position(np.array([0.,
