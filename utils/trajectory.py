@@ -7,7 +7,7 @@ from typing import Callable, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
-from core.dynamics import Lbras, beta, dq_max, l1, l2, l3
+# from core.dynamics import Lbras, beta, dq_max, l1, l2, l3
 from utils.types import Waypoint
 
 
@@ -52,7 +52,7 @@ def get_quintic_coeffs_and_time(
 
     a0, a1, a2, a3, a4, a5 = get_coeffs_as_function_of_time(waypoint_start, waypoint_end)
 
-    tf = 10  # Temporaire
+    tf = 5  # Temporaire
 
     A = np.concatenate([a0(), a1(), a2(), a3(tf), a4(tf), a5(tf)], axis=1).T
 

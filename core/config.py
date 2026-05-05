@@ -36,7 +36,9 @@ class Settings(BaseSettings):
     # PARAMÈTRES TEMPORELS
     # ========================================================================
 
-    timestep: float = 0.005  # Période d'échantillonnage (secondes)
+    timestep: float = (
+        0.005  # Période d'échantillonnage (secondes) (moitié plus cours que ce qu'on recoit en simulation (0.01s), TODO : vérifier pour simulink)
+    )
     simulation_duration: float = 15.0  # Durée totale de la simulation (secondes)
 
     # ========================================================================

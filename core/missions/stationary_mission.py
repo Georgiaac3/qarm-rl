@@ -16,6 +16,7 @@ class StationaryMission(Mission):
 
     def __init__(self, ini_waypoint=None):
         super().__init__()
+        self.ask_for_stop = False  # Flag pour indiquer que la mission doit être stoppée pour passer à la suivante, un humain ou une autre partie du programme doit le déclencher
         if ini_waypoint is not None:
             self.check_waypoint_validity(
                 ini_waypoint
@@ -24,6 +25,8 @@ class StationaryMission(Mission):
 
     def finish_condition(self, t, waypoint_mes):
         """La mission de stationnarité ne se termine jamais d'elle-même, elle doit être stoppée manuellement pour passer à la mission suivante."""
+        if self.ask_for_stop:
+            return True
         return False
 
     def set_ini_waypoint(self, waypoint):

@@ -500,7 +500,7 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     tau_cmd += G
     tau_cmd += friction
 
-    return tau_cmd
+    # return tau_cmd
 
     # print(dq_geo_mes.ravel())
 
@@ -513,5 +513,13 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     # 4. Normalisation du signal de tension entre -1 et 1
     # pwm = np.clip(Vcmd / (10 * Valim), -1, 1)
     pwm = np.clip(Vcmd / Valim, -1, 1)
+
+    if np.any(Vcmd / Valim > 1) or np.any(Vcmd / Valim < -1):
+        print(
+            "Warning: Commande de tension dépassant les limites d'alimentation. Vcmd/Valim:",
+            Vcmd.ravel() / Valim,
+        )
+
+    return tau_cmd
 
     return pwm

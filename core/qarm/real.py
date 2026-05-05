@@ -63,10 +63,10 @@ class QARMReal(QARMInterface):
         self.I3 = np.eye(3)  # Matrice identité 3x3 pré-allouée pour le calcul du Jacobien
         # self.Kp = np.diag([25, 25, 35])
         # self.Kd = np.diag([10, 10, 12])
-        self.Kp = 0 * np.diag(
+        self.Kp = 200 * np.diag(
             [1, 1, 1]
         )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Kd = 0 * np.diag(
+        self.Kd = 90 * np.diag(
             [1, 1, 1]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.lambda_damping = 0.05  # Facteur de damping pour l'inversion du Jacobien
