@@ -20,7 +20,7 @@ def make_env(seed=None):
 
 
 def train_sac(
-    total_timesteps: int = 50_000,
+    total_timesteps: int = 500_000,
     learning_rate: float = 3e-4,
     save_dir: str = "models_sac",
 ):
@@ -101,7 +101,7 @@ def train_sac(
 
 if __name__ == "__main__":
     model, save_path = train_sac(
-        total_timesteps=50_000,
+        total_timesteps=500_000,
         learning_rate=3e-4,
     )
     print(f"\n✓ All models saved in: {save_path}")
