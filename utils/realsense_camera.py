@@ -1,18 +1,35 @@
-from utils.logger import logger
-from core.config import settings
-from typing import Optional, Tuple, List
-import threading
+"""
+To use it you basically need to do:
+
+frames = robot.camera.get_frames()
+if frames is not None:
+    color_frame, depth_frame = frames
+
+    # Get detections with 3D coordinates
+    detections = robot.camera.get_detections(color_frame, depth_frame)
+    for det in detections:
+        print(f"Object: {det['label']}")
+        print(f"  2D center: {det['center_2d']}")
+        print(f"  3D center: {det['center_3d']}")  # (x, y, z) in meters
+"""
+
 import queue
+import threading
 import time
+from typing import List, Optional, Tuple
 
 import numpy as np
-from ultralytics import YOLO
 import pyrealsense2 as rs
+from ultralytics import YOLO
+
+from core.config import settings
+from utils.logger import logger
+
 
 class RealsenseCamera:
     """
     Manages RealSense camera pipeline and YOLO object detection.
-    Provides 3D coordinates of detected objects with confidence scores.
+    Provides 2D coordinates of detected objects with confidence scores.
     """
 
     def __init__(
@@ -38,7 +55,7 @@ class RealsenseCamera:
         self.camera_width = camera_width
         self.camera_height = camera_height
         self.fps = fps
-        
+
         # Load YOLO model
         self.model = YOLO(model_path)
         logger.info("YOLO model loaded successfully")
@@ -60,8 +77,12 @@ class RealsenseCamera:
     def _initialize_pipeline(self) -> None:
         """Configure and start RealSense pipeline."""
         config = rs.config()
-        config.enable_stream(rs.stream.color, self.camera_width, self.camera_height, rs.format.bgr8, self.fps)
-        config.enable_stream(rs.stream.depth, self.camera_width, self.camera_height, rs.format.z16, self.fps)
+        config.enable_stream(
+            rs.stream.color, self.camera_width, self.camera_height, rs.format.bgr8, self.fps
+        )
+        config.enable_stream(
+            rs.stream.depth, self.camera_width, self.camera_height, rs.format.z16, self.fps
+        )
         self.pipeline.start(config)
         logger.info("RealSense pipeline started")
 
@@ -135,7 +156,9 @@ class RealsenseCamera:
             logger.error(f"Error retrieving frames: {e}")
             return None
 
-    def detect_object(self, frame: np.ndarray, depth_frame) -> Optional[Tuple[np.ndarray, float, Tuple[int, int]]]:
+    def detect_object(
+        self, frame: np.ndarray, depth_frame
+    ) -> Optional[Tuple[np.ndarray, float, Tuple[int, int]]]:
         """
         Detect object in frame using YOLO and retrieve 3D coordinates.
 
@@ -174,13 +197,14 @@ class RealsenseCamera:
             return np.array(point_3d), conf, (u, v)
 
         return None
-    
-    def get_detections(self, frame: np.ndarray):
+
+    def get_detections(self, frame: np.ndarray, depth_frame=None):
         """
         Run YOLO detection and return all bounding boxes with labels.
 
         Args:
             frame: input image
+            depth_frame: Optional depth frame for 3D coordinates
 
         Returns:
             List of dict:
@@ -188,7 +212,9 @@ class RealsenseCamera:
                 {
                     "label": str,
                     "confidence": float,
-                    "bbox": (xmin, ymin, xmax, ymax)
+                    "bbox": (xmin, ymin, xmax, ymax),
+                    "center_2d": (u, v),
+                    "center_3d": (x, y, z) or None if depth_frame not provided
                 }
             ]
         """
@@ -204,15 +230,32 @@ class RealsenseCamera:
             # bbox
             xmin, ymin, xmax, ymax = detection.xyxy[0].cpu().numpy().astype(int)
 
+            # center pixel
+            u = int((xmin + xmax) / 2)
+            v = int((ymin + ymax) / 2)
+
             # class
             cls_id = int(detection.cls[0])
             label = self.model.names[cls_id]
 
-            output.append({
-                "label": label,
-                "confidence": conf,
-                "bbox": (xmin, ymin, xmax, ymax)
-            })
+            # Get 3D coordinates if depth_frame provided
+            center_3d = None
+            if depth_frame is not None:
+                distance = depth_frame.get_distance(u, v)
+                if distance > 0:
+                    intr = depth_frame.profile.as_video_stream_profile().intrinsics
+                    point_3d = rs.rs2_deproject_pixel_to_point(intr, [u, v], distance)
+                    center_3d = tuple(point_3d)
+
+            output.append(
+                {
+                    "label": label,
+                    "confidence": conf,
+                    "bbox": (xmin, ymin, xmax, ymax),
+                    "center_2d": (u, v),
+                    "center_3d": center_3d,
+                }
+            )
 
         return output
 
