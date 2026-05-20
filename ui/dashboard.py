@@ -1,3 +1,6 @@
+# ===============================
+# File generated primarily by AI
+# ===============================
 import queue as pyqueue
 from collections import deque
 
@@ -318,6 +321,26 @@ class RealTimeApp:
                     dpg.mvPlotStyleVar_LineWeight, 1.0, category=dpg.mvThemeCat_Plots
                 )
 
+        # Theme pour TCP_Trajectoire (rouge/orange)
+        with dpg.theme() as tcp_scatter_theme:
+            with dpg.theme_component(dpg.mvScatterSeries):
+                dpg.add_theme_color(
+                    dpg.mvPlotCol_MarkerFill, (255, 127, 0, 255), category=dpg.mvThemeCat_Plots
+                )
+                dpg.add_theme_color(
+                    dpg.mvPlotCol_MarkerOutline, (255, 127, 0, 255), category=dpg.mvThemeCat_Plots
+                )
+
+        # Theme pour Wanted_TCP_Trajectoire (bleu)
+        with dpg.theme() as wanted_scatter_theme:
+            with dpg.theme_component(dpg.mvScatterSeries):
+                dpg.add_theme_color(
+                    dpg.mvPlotCol_MarkerFill, (0, 149, 255, 255), category=dpg.mvThemeCat_Plots
+                )
+                dpg.add_theme_color(
+                    dpg.mvPlotCol_MarkerOutline, (0, 149, 255, 255), category=dpg.mvThemeCat_Plots
+                )
+
         dpg.bind_theme(global_theme)
 
         dpg.create_viewport(title="QARM Dashboard - Perspective 3D", width=1300, height=1000)
@@ -348,7 +371,10 @@ class RealTimeApp:
             with dpg.collapsing_header(
                 label="Espace de Travail (Perspective 3D)", default_open=True
             ):
-                for var in self.vars_3d:
+                # Skip Wanted_TCP_Trajectoire as it will be plotted with TCP_trajectoire
+                vars_to_plot = [v for v in self.vars_3d if v != "Wanted_TCP_Trajectoire"]
+
+                for var in vars_to_plot:
                     floor_lines = self.get_floor_lines()
                     # On agrandit la fenêtre (height=500)
                     with dpg.plot(
@@ -430,9 +456,9 @@ class RealTimeApp:
                                 parent=y_ax_3d,
                             )
 
-                        # Trajectoire (ligne)
+                        # Trajectoire actuelle (ligne)
                         dpg.add_line_series(
-                            [], [], label="Historique", tag=f"series_3d_line_{var}", parent=y_ax_3d
+                            [], [], label=f"{var}", tag=f"series_3d_line_{var}", parent=y_ax_3d
                         )
                         # Position actuelle (gros point)
                         dpg.add_scatter_series(
@@ -442,6 +468,27 @@ class RealTimeApp:
                             tag=f"series_3d_head_{var}",
                             parent=y_ax_3d,
                         )
+                        dpg.bind_item_theme(f"series_3d_head_{var}", tcp_scatter_theme)
+
+                        # Si "Wanted_TCP_Trajectoire" existe et var est "TCP_Trajectoire", ajouter la trajectoire voulue
+                        if var == "TCP_Trajectoire" and "Wanted_TCP_Trajectoire" in self.vars_3d:
+                            dpg.add_line_series(
+                                [],
+                                [],
+                                label="Wanted_TCP_Trajectoire",
+                                tag="series_3d_line_Wanted_TCP_Trajectoire",
+                                parent=y_ax_3d,
+                            )
+                            dpg.add_scatter_series(
+                                [],
+                                [],
+                                label="Position Wanted TCP",
+                                tag="series_3d_head_Wanted_TCP_Trajectoire",
+                                parent=y_ax_3d,
+                            )
+                            dpg.bind_item_theme(
+                                "series_3d_head_Wanted_TCP_Trajectoire", wanted_scatter_theme
+                            )
 
                         # Fixer les limites pour éviter la déformation visuelle et le "saut".
                         x_min, x_max, y_min, y_max = self.get_isotropic_limits(var)
@@ -508,7 +555,8 @@ class RealTimeApp:
             dpg.set_value(f"series_{var}", [self.x_data, list(self.y_data[var])])
 
         # 4. Mise à jour des axes 3D (rotatifs)
-        for var in self.vars_3d:
+        vars_to_update = [v for v in self.vars_3d if v != "Wanted_TCP_Trajectoire"]
+        for var in vars_to_update:
             x_min, x_max, y_min, y_max = self.get_isotropic_limits(var)
             dpg.set_axis_limits(f"x_axis_3d_{var}", x_min, x_max)
             dpg.set_axis_limits(f"y_axis_3d_{var}", y_min, y_max)
@@ -580,6 +628,32 @@ class RealTimeApp:
             # Mise à jour du point de tête (dernier point reçu)
             if u_list:
                 dpg.set_value(f"series_3d_head_{var}", [[u_list[-1]], [v_list[-1]]])
+
+            # Si "Wanted_TCP_Trajectoire" existe et var est "TCP_Trajectoire", mettre à jour cette trajectoire aussi
+            if var == "TCP_Trajectoire" and "Wanted_TCP_Trajectoire" in self.vars_3d:
+                wanted_x_list = list(self.data_3d["Wanted_TCP_Trajectoire"]["x"])
+                wanted_y_list = list(self.data_3d["Wanted_TCP_Trajectoire"]["y"])
+                wanted_z_list = list(self.data_3d["Wanted_TCP_Trajectoire"]["z"])
+
+                # Reprojeter tout l'historique avec la vue courante.
+                wanted_u_list = []
+                wanted_v_list = []
+                for x, y, z in zip(wanted_x_list, wanted_y_list, wanted_z_list):
+                    u, v = self.project_3d_to_2d(x, y, z)
+                    wanted_u_list.append(u)
+                    wanted_v_list.append(v)
+
+                # Mise à jour de la ligne
+                dpg.set_value(
+                    "series_3d_line_Wanted_TCP_Trajectoire", [wanted_u_list, wanted_v_list]
+                )
+
+                # Mise à jour du point de tête (dernier point reçu)
+                if wanted_u_list:
+                    dpg.set_value(
+                        "series_3d_head_Wanted_TCP_Trajectoire",
+                        [[wanted_u_list[-1]], [wanted_v_list[-1]]],
+                    )
 
     def run(self):
         dpg.show_viewport()

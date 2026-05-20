@@ -47,7 +47,7 @@ def run_robot(data_queue=None, stop_event=None):
 
     # Connecting to the robot via udp
     robot.connect()
-    robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
+    # robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
 
     # Creating missions
     # Mission 1 [Armement du bras]: Se déplacer à une position donnée
@@ -132,10 +132,12 @@ def run_robot(data_queue=None, stop_event=None):
         # --- ENVOI DES DONNÉES POUR VISUALISATION/LOGGING ---
         if data_queue is not None:
             if phi is not None and dphi is not None and robot.last_X_mes is not None:
+                print(robot.last_X_des.ravel().tolist())
                 packet = {
                     "Angles Articulations mesurés (rad)": phi.ravel().tolist(),
                     "Vitesses mesurées (rad/s)": dphi.ravel().tolist(),
                     "TCP_Trajectoire": robot.last_X_mes.ravel().tolist(),
+                    "Wanted_TCP_Trajectoire": robot.last_X_des.ravel().tolist(),
                 }
 
                 try:

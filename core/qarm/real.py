@@ -75,6 +75,7 @@ class QARMReal(QARMInterface):
         # Affichage dans l'interface graphique #
         ########################################
         self.last_X_mes: Optional[NDArray[np.float64]] = None
+        self.last_X_des: Optional[NDArray[np.float64]] = None
         self.last_pwm: Optional[list] = None
 
     # -------------------- Lecture angles --------------------
@@ -395,6 +396,7 @@ class QARMReal(QARMInterface):
             return
 
         X_des = waypoint_desired.position
+        self.last_X_des = X_des  # Stocker la dernière position de consigne pour l'affichage dans l'interface graphique
         dX_des = waypoint_desired.velocity
         ddX_des = waypoint_desired.acceleration
 

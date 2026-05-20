@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # ========================================================================
 
     timestep: float = (
-        0.005  # Période d'échantillonnage (secondes) (moitié plus cours que ce qu'on recoit en simulation (0.01s), TODO : vérifier pour simulink)
+        0.005  # Période d'échantillonnage (secondes) (moitié plus cours que ce qu'on recoit en simulation (0.01s), TODO : vérifier pour simulink dans QUARC > Model Settings > Solver details > Fixed-step size)
     )
     simulation_duration: float = 15.0  # Durée totale de la simulation (secondes)
 
@@ -61,7 +61,7 @@ class Settings(BaseSettings):
         # "Vitesses mesurées (rad/s)": ["Speed_1_mes", "Speed_2_mes", "Speed_3_mes", "Speed_4_mes"],
         "PWM envoyés": ["PWM_1_cmd", "PWM_2_cmd", "PWM_3_cmd", "PWM_4_cmd", "Grip_cmd"],
     }
-    graphs_3d: List[str] = ["TCP_Trajectoire"]
+    graphs_3d: List[str] = ["TCP_Trajectoire", "Wanted_TCP_Trajectoire"]
 
     # ========================================================================
     # AUTRES PARAMÈTRES
