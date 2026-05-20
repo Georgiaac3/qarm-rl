@@ -41,12 +41,12 @@ REWARD_CONFIG = {
 # ============================================================================
 TRAINING_CONFIG = {
     # Training duration
-    "total_timesteps": 50_000,  # ⬅️ GPU: 100K-200K, CPU: 20K-50K
+    "total_timesteps": 200_000,  # ⬅️ GPU: 100K-200K, CPU: 20K-50K
     # Evaluation
-    "eval_freq": 5_000,  # How often to evaluate (not too frequent to avoid slowdown)
+    "eval_freq": 10_000,  # How often to evaluate (not too frequent to avoid slowdown)
     "n_eval_episodes": 10,  # Episodes per evaluation
     # Checkpoint saving
-    "checkpoint_freq": 5_000,  # Save model every N steps
+    "checkpoint_freq": 10_000,  # Save model every N steps
 }
 
 # ============================================================================
