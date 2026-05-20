@@ -23,6 +23,38 @@ def analyze_throwing_results(eval_file="models_sac_throwing/eval_logs/evaluation
     print("THROWING TASK - DETAILED RESULTS ANALYSIS")
     print("=" * 80 + "\n")
 
+    # DATA VALIDATION CHECKS
+    print("DATA QUALITY CHECKS:")
+    print("-" * 80)
+
+    # Check 1: Multiple evaluation checkpoints
+    n_unique_timesteps = len(np.unique(timesteps))
+    if n_unique_timesteps == 1:
+        print(f"⚠️  WARNING: Only 1 evaluation checkpoint recorded!")
+        print(f"   Timesteps: {timesteps[0]:,}")
+        print(f"   This could mean:")
+        print(f"   - eval_freq was higher than total training duration")
+        print(f"   - EvalCallback didn't trigger during training")
+        print(f"   - Fix: Lower eval_freq in config.py or increase total_timesteps")
+    else:
+        print(f"✓ Multiple checkpoints: {n_unique_timesteps} unique evaluation points")
+
+    # Check 2: Sufficient data
+    if results.shape[1] < 5:
+        print(f"⚠️  WARNING: Only {results.shape[1]} episodes per eval - may have high variance")
+    else:
+        print(f"✓ Episodes per eval: {results.shape[1]} (sufficient)")
+
+    # Check 3: Sufficient time range
+    if len(timesteps) < 3:
+        print(f"⚠️  INSUFFICIENT DATA: Only {len(timesteps)} evaluation point(s)")
+        print(f"   Cannot assess learning trends with so few checkpoints")
+        print(f"   Need at least 3-5 checkpoints for meaningful analysis")
+    else:
+        print(f"✓ Evaluation points: {len(timesteps)} checkpoints (good)")
+
+    print()
+
     # Basic stats
     mean_rews = np.mean(results, axis=1)
     std_rews = np.std(results, axis=1)
@@ -33,6 +65,7 @@ def analyze_throwing_results(eval_file="models_sac_throwing/eval_logs/evaluation
     print(f"Training Duration: {timesteps[0]:,} to {timesteps[-1]:,} steps")
     print(f"Evaluation Points: {len(timesteps)}")
     print(f"Episodes per Eval: {results.shape[1]}")
+    print(f"Reward Range Observed: [{min_rews.min():.2f}, {max_rews.max():.2f}]")
     print()
 
     # 1. PERFORMANCE OVERVIEW
@@ -79,16 +112,18 @@ def analyze_throwing_results(eval_file="models_sac_throwing/eval_logs/evaluation
 
     # 3. SUCCESS RATE ANALYSIS
     print("\n" + "=" * 80)
-    print("3. SUCCESS METRICS (Hit = reward ≥ 50)")
+    print("3. SUCCESS METRICS")
     print("=" * 80)
 
-    # Threshold for hitting: reward >= 50 means good trajectory
-    hit_threshold = 50
+    # Dynamic threshold: use a sensible reward cutoff
+    # With current reward shaping: -10 (far miss) to +100 (hit)
+    # A "good" throw is > -5 (better than worst miss) or >= 20 (close/medium close)
+    hit_threshold = 20  # Medium close hit = reward >= 20
 
     hits_per_eval = [np.sum(results[i] >= hit_threshold) for i in range(len(timesteps))]
     hit_rates = [hits / results.shape[1] * 100 for hits in hits_per_eval]
 
-    print(f"\nHit Rate (reward ≥ {hit_threshold}):")
+    print(f"\nGood Hit Rate (reward ≥ {hit_threshold}):")
     print(f"  Step {timesteps[0]:>6,} | {hit_rates[0]:>5.1f}%")
     print(f"  Step {timesteps[-1]:>6,} | {hit_rates[-1]:>5.1f}%")
 
@@ -96,30 +131,38 @@ def analyze_throwing_results(eval_file="models_sac_throwing/eval_logs/evaluation
         print(f"  ✓ Improvement: +{hit_rates[-1] - hit_rates[0]:.1f}%")
     elif hit_rates[-1] < hit_rates[0]:
         print(f"  ❌ Degradation: {hit_rates[-1] - hit_rates[0]:.1f}%")
+    else:
+        print(f"  = No change: {hit_rates[-1] - hit_rates[0]:.1f}%")
+
+    # Also show direct hits
+    direct_hits = [np.sum(results[i] >= 50) for i in range(len(timesteps))]
+    direct_hit_rates = [hits / results.shape[1] * 100 for hits in direct_hits]
+
+    print(f"\nDirect Hits (reward ≥ 50):")
+    print(f"  Start: {direct_hit_rates[0]:.1f}% | End: {direct_hit_rates[-1]:.1f}%")
 
     # 4. CONVERGENCE ANALYSIS
     print("\n" + "=" * 80)
     print("4. CONVERGENCE ANALYSIS")
-    print("=" * 80)
+    if len(timesteps) >= 3:
+        try:
+            # Use more points if available, but at least 3
+            trend_points = min(5, len(timesteps))
+            recent_trend = np.polyfit(timesteps[-trend_points:], mean_rews[-trend_points:], 1)[0]
+            print(
+                f"\nRecent trend (slope over last {trend_points} checkpoints): {recent_trend:.6f}"
+            )
 
-    # Check if converging to optimum
-    last_5_mean = np.mean(mean_rews[-5:])
-    first_5_mean = np.mean(mean_rews[:5])
-
-    print(f"\nFirst 5 checkpoints average: {first_5_mean:.2f}")
-    print(f"Last 5 checkpoints average: {last_5_mean:.2f}")
-    print(f"Improvement in last phase: {last_5_mean - first_5_mean:+.2f}")
-
-    # Check convergence criterion: if variance is small and trend is flat
-    recent_trend = np.polyfit(timesteps[-5:], mean_rews[-5:], 1)[0]
-    print(f"\nRecent trend (slope): {recent_trend:.6f}")
-
-    if abs(recent_trend) < 0.001:
-        print("  ✓ Policy converged (flat trend)")
-    elif recent_trend > 0:
-        print("  ⚠ Still improving slightly")
+            if abs(recent_trend) < 0.1:  # More forgiving threshold
+                print("  ✓ Policy converged (flat trend)")
+            elif recent_trend > 0.1:
+                print("  ⚠ Still improving")
+            else:
+                print("  ❌ Degrading at the end")
+        except:
+            print("\n⚠ Could not compute trend (insufficient data)")
     else:
-        print("  ❌ Degrading at the end")
+        print("\n⚠ Not enough checkpoints to assess trend")
 
     # 5. VARIANCE PROGRESSION
     print("\n" + "=" * 80)
@@ -138,21 +181,23 @@ def analyze_throwing_results(eval_file="models_sac_throwing/eval_logs/evaluation
 
     # 6. FAILURE ANALYSIS
     print("\n" + "=" * 80)
-    print("6. FAILURE ANALYSIS (Low Rewards)")
+    print("6. FAILURE ANALYSIS (Poor Throws)")
     print("=" * 80)
 
-    failure_threshold = -1.0  # Very bad performance
+    failure_threshold = -5.0  # Very bad: worse than average miss
     failures_per_eval = [np.sum(results[i] < failure_threshold) for i in range(len(timesteps))]
     failure_rates = [fails / results.shape[1] * 100 for fails in failures_per_eval]
 
-    print(f"\nFail Rate (reward < {failure_threshold}):")
+    print(f"\nBad Throw Rate (reward < {failure_threshold}):")
     print(f"  Step {timesteps[0]:>6,} | {failure_rates[0]:>5.1f}%")
     print(f"  Step {timesteps[-1]:>6,} | {failure_rates[-1]:>5.1f}%")
 
     if failure_rates[-1] < failure_rates[0]:
-        print(f"  ✓ Fewer failures: -{failure_rates[0] - failure_rates[-1]:.1f}%")
+        print(f"  ✓ Fewer catastrophic failures: -{failure_rates[0] - failure_rates[-1]:.1f}%")
+    elif failure_rates[-1] > failure_rates[0]:
+        print(f"  ❌ More catastrophic failures: +{failure_rates[-1] - failure_rates[0]:.1f}%")
     else:
-        print(f"  ❌ More failures: +{failure_rates[-1] - failure_rates[0]:.1f}%")
+        print(f"  = Same failure rate")
 
     # 7. DETAILED CHECKPOINT TABLE
     print("\n" + "=" * 80)
@@ -174,40 +219,54 @@ def analyze_throwing_results(eval_file="models_sac_throwing/eval_logs/evaluation
     print("\n" + "=" * 80)
     print("8. KEY FINDINGS & DIAGNOSIS")
     print("=" * 80)
-
     findings = []
-
-    # Check 1: Is it converging?
-    if abs(recent_trend) < 0.001 and last_5_mean > first_5_mean:
-        findings.append("✓ CONVERGING: Policy reached stable state")
-    elif abs(recent_trend) < 0.001 and last_5_mean <= first_5_mean:
-        findings.append("❌ CONVERGED TO BAD: Policy stable but poor rewards")
-    elif recent_trend > 0.001:
-        findings.append("⚠ STILL LEARNING: Policy still improving (needs more steps)")
+    if len(np.unique(timesteps)) == 1:
+        findings.append("⚠️  LIMITED DATA: Only 1 evaluation checkpoint recorded")
+        findings.append(f"   Step: {timesteps[0]:,}")
+        findings.append("   The training likely continued, but EvalCallback only triggered once")
+        findings.append("   To fix: Decrease eval_freq in config.py (e.g., 2000 instead of 5000)")
+    elif len(timesteps) < 3:
+        findings.append(f"⚠️  INSUFFICIENT DATA: Only {len(timesteps)} evaluation points")
+        findings.append("   Not enough checkpoints to assess learning trends reliably")
     else:
-        findings.append("❌ DEGRADING: Policy getting worse (possible overfitting/instability)")
+        # Check 1: Is it converging?
+        if len(timesteps) >= 5:
+            try:
+                recent_trend = np.polyfit(timesteps[-5:], mean_rews[-5:], 1)[0]
+                if abs(recent_trend) < 0.1 and last_5_mean > first_5_mean:
+                    findings.append("✓ CONVERGING: Policy reached stable, improving state")
+                elif abs(recent_trend) < 0.1 and last_5_mean <= first_5_mean:
+                    findings.append("⚠️  PLATEAU: Policy stable but not improving")
+                elif recent_trend > 0.1:
+                    findings.append("✓ STILL LEARNING: Policy improving (needs more steps)")
+                else:
+                    findings.append("❌ DEGRADING: Performance declining at the end")
+            except:
+                findings.append("⚠️  Cannot assess convergence trend")
 
-    # Check 2: Is variance good?
-    if stability_final < 0.5:
-        findings.append("✓ STABLE POLICY: Low variance relative to reward")
-    elif stability_final < 1.0:
-        findings.append("⚠ MODERATE VARIANCE: Acceptable but could be better")
-    else:
-        findings.append("❌ UNSTABLE POLICY: High variance - policy is unpredictable")
+        # Check 2: Is variance good?
+        if stability_final < 0.5:
+            findings.append("✓ STABLE POLICY: Consistent performance")
+        elif stability_final < 1.0:
+            findings.append("⚠️  MODERATE VARIANCE: Performance varies but predictable")
+        else:
+            findings.append("❌ UNSTABLE POLICY: High variance - unreliable")
 
-    # Check 3: Success rate
-    if hit_rates[-1] > 50:
-        findings.append(f"✓ GOOD HIT RATE: {hit_rates[-1]:.1f}% successful throws")
-    elif hit_rates[-1] > 20:
-        findings.append(f"⚠ MODERATE SUCCESS: {hit_rates[-1]:.1f}% hit rate (can improve)")
-    else:
-        findings.append(f"❌ POOR SUCCESS: Only {hit_rates[-1]:.1f}% throws succeed")
+        # Check 3: Success rate
+        if hit_rates[-1] > 50:
+            findings.append(f"✓ GOOD HIT RATE: {hit_rates[-1]:.1f}% good throws")
+        elif hit_rates[-1] > 20:
+            findings.append(f"⚠️  MODERATE SUCCESS: {hit_rates[-1]:.1f}% success (can improve)")
+        else:
+            findings.append(f"❌ POOR SUCCESS: Only {hit_rates[-1]:.1f}% successful")
 
-    # Check 4: Exploration
-    if std_rews[-1] < std_rews[0]:
-        findings.append("✓ CONTROLLED EXPLORATION: Variance decreased over time")
-    else:
-        findings.append("❌ EXCESSIVE EXPLORATION: Variance stayed high/increased")
+        # Check 4: Exploration
+        if std_rews[-1] < std_rews[0]:
+            findings.append("✓ LEARNING: Agent is reducing exploration")
+        elif std_rews[-1] > std_rews[0] * 1.5:
+            findings.append("⚠️  EXPLORATION: Variance increased during training")
+        else:
+            findings.append("✓ STABLE VARIANCE: Consistent uncertainty level")
 
     print("\n" + "\n".join(findings))
 
@@ -259,20 +318,23 @@ def plot_throwing_analysis(eval_file="models_sac_throwing/eval_logs/evaluations.
     ax.grid(True, alpha=0.3)
     ax.legend()
 
-    # Plot 3: Hit rates (assuming reward >= 50)
+    # Plot 3: Hit rates (reward >= 20 = good throw)
     ax = axes[1, 0]
-    hit_rates = [np.sum(results[i] >= 50) / len(results[i]) * 100 for i in range(len(timesteps))]
+    hit_threshold = 20  # Consistent with analysis above
+    hit_rates_plot = [
+        np.sum(results[i] >= hit_threshold) / len(results[i]) * 100 for i in range(len(timesteps))
+    ]
     ax.bar(
         timesteps,
-        hit_rates,
+        hit_rates_plot,
         width=timesteps[1] - timesteps[0] if len(timesteps) > 1 else 5000,
         alpha=0.7,
         edgecolor="black",
         color="steelblue",
     )
-    ax.set_ylabel("Hit Rate (%)", fontsize=11)
+    ax.set_ylabel("Good Hit Rate (%)", fontsize=11)
     ax.set_xlabel("Training Steps")
-    ax.set_title("Success Rate Over Training")
+    ax.set_title(f"Success Rate Over Training (reward ≥ {hit_threshold})")
     ax.set_ylim([0, 105])
     ax.grid(True, alpha=0.3, axis="y")
 

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+from config import get_config
 from env_2d_throwing import Arm2DThrowingEnv
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
@@ -25,65 +26,79 @@ class CurriculumCallback:
         self.env.target_distance_range = (min_dist, max_dist)
 
 
-def make_env(seed=None, max_distance=None):
+def make_env(env_config, seed=None, max_distance=None):
+    """Create and wrap environment."""
+    initial_range = env_config.get("target_distance_range", (0.5, 1.5))
+    if max_distance:
+        initial_range = (0.5, max_distance)
+
     env = Arm2DThrowingEnv(
-        max_steps=200,
-        target_distance_range=(0.5, 1.5) if max_distance is None else (0.5, max_distance),
-        gravity=9.81,
-        air_resistance=0.1,
-        dt=0.01,
+        max_steps=env_config["max_steps"],
+        target_distance_range=initial_range,
+        gravity=env_config["gravity"],
+        air_resistance=env_config["air_resistance"],
+        projectile_radius=env_config["projectile_radius"],
+        dt=env_config["dt"],
     )
     env = Monitor(env)
     env.reset(seed=seed)
     return env
 
 
-def train_sac_throwing(
-    total_timesteps: int = 50_000,
-    learning_rate: float = 5e-5,  # Even lower for stability
-    save_dir: str = "models_sac_throwing",
-    use_curriculum: bool = True,
-):
+def train_sac_throwing(device="auto", save_dir="models_sac_throwing"):
     """
-    Train SAC agent on 2D throwing task.
+    Train SAC agent on 2D throwing task using configuration parameters.
+
+    Args:
+        device: "auto" (detect), "cuda", or "cpu"
+        save_dir: Directory to save models
     """
+    # Load configuration
+    config = get_config(device=device)
+    env_cfg = config["env"]
+    curr_cfg = config["curriculum"]
+    training_cfg = config["training"]
+    sac_cfg = config["sac"]
+
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
     print("=" * 80)
     print("THROWING TASK TRAINING")
     print("=" * 80)
-    print(f"Total timesteps: {total_timesteps}")
-    print(f"Learning rate: {learning_rate}")
-    print(f"Curriculum learning: {use_curriculum}")
-    print(f"Expected runtime: ~1-2 hours")
+    print(f"Device: {sac_cfg['device']}")
+    print(f"Total timesteps: {training_cfg['total_timesteps']:,}")
+    print(f"Learning rate: {sac_cfg['learning_rate']}")
+    print(f"Batch size: {sac_cfg['batch_size']}")
+    print(f"Network: {sac_cfg['net_arch']}")
+    print(f"Curriculum learning: {curr_cfg['use_curriculum']}")
     print()
 
     # Create environments
-    env = make_env(seed=42)
-    eval_env = make_env(seed=43)
+    env = make_env(env_cfg, seed=42, max_distance=curr_cfg["initial_range"][1])
+    eval_env = make_env(env_cfg, seed=43, max_distance=curr_cfg["initial_range"][1])
 
-    # Create SAC model with improved hyperparameters
+    # Create SAC model
     model = SAC(
         policy="MlpPolicy",
         env=env,
-        learning_rate=learning_rate,
-        buffer_size=50_000,  # Smaller buffer = fresher data
-        learning_starts=2_000,  # Learn a bit after random exploration
-        batch_size=128,  # Smaller batches = more stable
-        tau=0.01,  # Slower target network update
-        gamma=0.99,
-        train_freq=1,
-        gradient_steps=1,
-        ent_coef=0.05,  # FIXED VALUE: much lower than 'auto' for stability, otherwise it was chaotic
-        target_entropy=-2.0,
+        learning_rate=sac_cfg["learning_rate"],
+        buffer_size=sac_cfg["buffer_size"],
+        learning_starts=sac_cfg["learning_starts"],
+        batch_size=sac_cfg["batch_size"],
+        tau=sac_cfg["tau"],
+        gamma=sac_cfg["gamma"],
+        train_freq=sac_cfg["train_freq"],
+        gradient_steps=sac_cfg["gradient_steps"],
+        ent_coef=sac_cfg["ent_coef"],
+        target_entropy=sac_cfg["target_entropy"],
         policy_kwargs={
-            "net_arch": [128, 128],
+            "net_arch": sac_cfg["net_arch"],
             "activation_fn": lambda: __import__("torch.nn", fromlist=["ReLU"]).ReLU(),
         },
         verbose=1,
-        device="auto",
-        seed=42,
+        device=sac_cfg["device"],
+        seed=sac_cfg["seed"],
     )
 
     print(f"Model Parameters: {sum(p.numel() for p in model.policy.parameters()):,}")
@@ -91,7 +106,7 @@ def train_sac_throwing(
 
     # Callbacks
     checkpoint_callback = CheckpointCallback(
-        save_freq=10_000,
+        save_freq=training_cfg["checkpoint_freq"],
         save_path=save_path / "checkpoints",
         name_prefix="sac_throwing",
     )
@@ -100,29 +115,43 @@ def train_sac_throwing(
         eval_env,
         best_model_save_path=save_path / "best_model",
         log_path=save_path / "eval_logs",
-        eval_freq=5_000,
-        n_eval_episodes=10,
+        eval_freq=training_cfg["eval_freq"],
+        n_eval_episodes=training_cfg["n_eval_episodes"],
         deterministic=True,
         render=False,
     )
 
     # Curriculum learning
-    curriculum = CurriculumCallback(env) if use_curriculum else None
+    curriculum = None
+    if curr_cfg["use_curriculum"]:
+        curriculum = CurriculumCallback(
+            env, initial_range=curr_cfg["initial_range"], final_range=curr_cfg["final_range"]
+        )
 
     # Training
-    print("Starting training...\n")
+    print(f"Starting training for {training_cfg['total_timesteps']:,} timesteps...\n")
     try:
-        for step in range(0, total_timesteps, 5_000):
-            # Update curriculum
-            if curriculum:
-                curriculum.update_difficulty(step, total_timesteps)
+        # Train with curriculum learning via callback
+        if curriculum:
+            # Need to update curriculum during training manually
+            # Train in chunks with curriculum updates
+            for step in range(0, training_cfg["total_timesteps"], 1_000):
+                curriculum.update_difficulty(step, training_cfg["total_timesteps"])
                 min_d, max_d = env.target_distance_range
-                print(f"[Curriculum] Step {step:,}: Target range {min_d:.2f}-{max_d:.2f}m")
+                print(f"[Curriculum] Step {step:>7,}: Target range {min_d:.2f}-{max_d:.2f}m")
 
+                model.learn(
+                    total_timesteps=1_000,
+                    callback=[checkpoint_callback, eval_callback],
+                    log_interval=20,
+                    progress_bar=True,
+                )
+        else:
+            # No curriculum: single training call (recommended - cleaner eval logging)
             model.learn(
-                total_timesteps=5_000,
+                total_timesteps=training_cfg["total_timesteps"],
                 callback=[checkpoint_callback, eval_callback],
-                log_interval=20,
+                log_interval=100,
                 progress_bar=True,
             )
 
@@ -133,15 +162,10 @@ def train_sac_throwing(
         model.save(str(final_path))
         print(f"✓ Final model saved to {final_path}")
 
-        # Load best model
+        # Check best model
         best_path = save_path / "best_model" / "best_model.zip"
         if best_path.exists():
-            print(f"\n✓ Loading best model from checkpoint...")
-            best_model = SAC.load(str(best_path))
-            eval_best = make_env(seed=99)
-            obs, _ = eval_best.reset()
-            print("  Best model loaded successfully")
-            eval_best.close()
+            print(f"✓ Best model available at {best_path}")
 
     except KeyboardInterrupt:
         print("\n⚠ Training interrupted by user")
@@ -162,15 +186,11 @@ def train_sac_throwing(
 
 if __name__ == "__main__":
     print("\n" + "=" * 80)
-    print("IMPROVED 2D THROWING TRAINING")
+    print("2D THROWING TASK - SAC TRAINING")
     print("=" * 80 + "\n")
 
-    model, save_path = train_sac_throwing(
-        total_timesteps=250_000,
-        learning_rate=5e-5,
-        use_curriculum=True,
-    )
+    model, save_path = train_sac_throwing(device="auto")
 
     print(f"\n✓ Training complete! Models saved in: {save_path}")
     print("\nNext step:")
-    print("  python analyze_throwing_results.py")
+    print("  cd simple_2d_arm && python analyze_throwing_results.py")

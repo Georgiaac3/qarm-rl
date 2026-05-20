@@ -77,6 +77,7 @@ class Arm2DThrowingEnv(gym.Env):
         self.step_count = 0
         self.last_action = np.array([0.0, 5.0], dtype=np.float32)
         self.has_thrown = False
+        self.best_distance = float("inf")  # Track best distance during trajectory
 
     def _sample_target(self) -> np.ndarray:
         """Sample random target position."""
@@ -138,34 +139,73 @@ class Arm2DThrowingEnv(gym.Env):
 
     def _compute_reward(self) -> float:
         """
-        Improved reward shaping:
-        - Quadratic penalty for distance (more penalty for large errors)
-        - Better bonus for hitting
-        - Time penalty smaller to not discourage throwing
+        Progressive reward during simulation (not used for RL, only for tracking).
+        For RL training, use _compute_final_reward() instead.
         """
         if not self.has_thrown:
-            return -0.1  # Small penalty for not throwing
+            return 0.0
 
         distance = float(np.linalg.norm(self.projectile - self.target))
 
-        # Quadratic penalty: encourages getting closer
-        # Reference: max theoretical distance ~7m, so scale accordingly
+        # Track progress: reward for getting closer
+        progress_reward = 0.0
+        if self.best_distance != float("inf") and distance < self.best_distance:
+            progress_reward = (self.best_distance - distance) * 0.1
+
+        # Update best distance for next step
+        if distance < self.best_distance:
+            self.best_distance = distance
+
+        # Distance penalty: quadratic for larger errors
         max_distance = 7.0
         normalized_distance = min(distance / max_distance, 1.0)
-        reward = -(normalized_distance**2) * 10.0  # Range: -10 to 0
+        distance_penalty = -(normalized_distance**2) * 2.0  # Small per-step penalty
 
-        # Bonus for hitting (distance < projectile radius)
-        if distance < self.projectile_radius * 3:
-            reward += 100.0
-        elif distance < 0.5:
-            reward += 50.0
-        elif distance < 1.0:
-            reward += 20.0
+        # Tiered bonus for getting close
+        hit_bonus = 0.0
+        if distance < 0.5:
+            hit_bonus = 1.0
 
-        # Very small time penalty to encourage efficiency
-        reward -= 0.001 * self.time_in_flight
-
+        reward = distance_penalty + progress_reward + hit_bonus
         return reward
+
+    def _compute_final_reward(self, distance: float) -> float:
+        """
+        Compute final reward for the entire throw based on outcome.
+        This is what RL agent sees - a single reward evaluating the throw.
+
+        Args:
+            distance: Final distance from projectile to target
+
+        Returns:
+            Single reward value for this throw
+        """
+        # Distance penalty: quadratic, normalized to max distance
+        max_distance = 7.0
+        normalized_distance = min(distance / max_distance, 1.0)
+        distance_reward = -(normalized_distance**2) * 10.0  # Range: -10 to 0
+
+        # Major bonus for hitting
+        hit_bonus = 0.0
+        if distance < self.projectile_radius * 2:
+            # Direct hit!
+            hit_bonus = 100.0
+        elif distance < self.projectile_radius * 5:
+            # Very close
+            hit_bonus = 50.0
+        elif distance < 0.2:
+            # Close (10cm)
+            hit_bonus = 20.0
+        elif distance < 0.5:
+            # Medium close (50cm)
+            hit_bonus = 5.0
+
+        # Time penalty (small)
+        time_penalty = -0.01 * self.time_in_flight
+
+        final_reward = distance_reward + hit_bonus + time_penalty
+
+        return final_reward
 
     def _is_done(self) -> bool:
         """
@@ -211,6 +251,8 @@ class Arm2DThrowingEnv(gym.Env):
 
         Action: [launch_angle, launch_velocity]
         - Throw the projectile with given angle and velocity
+        - Simulates physics until projectile stops or hits ground
+        - Returns SINGLE reward for the entire throw
         """
         # Take the action as the throw parameters
         launch_angle = float(action[0])
@@ -232,16 +274,20 @@ class Arm2DThrowingEnv(gym.Env):
         self.time_in_flight = 0.0
         self.has_thrown = True
         self.last_action = np.array([launch_angle, launch_velocity], dtype=np.float32)
+        self.best_distance = float("inf")  # Reset best distance for this throw
 
-        # Simulate until done or max steps
-        episode_reward = 0.0
-        for _ in range(100):  # Max 100 simulation steps per action
+        # Simulate physics until projectile stops or max steps
+        # NOTE: We simulate multiple physics steps but return a SINGLE reward
+        for _ in range(100):  # Max 100 physics simulation steps per action
             self._simulate_projectile_step()
-            reward = self._compute_reward()
-            episode_reward = reward
 
             if self._is_done():
                 break
+
+        # Calculate reward ONCE based on final state
+        # This is the key: we don't accumulate rewards, we evaluate the outcome
+        distance = float(np.linalg.norm(self.projectile - self.target))
+        episode_reward = self._compute_final_reward(distance)
 
         # Get observation
         obs = self._get_obs()
