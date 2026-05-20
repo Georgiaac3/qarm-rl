@@ -38,7 +38,7 @@ def make_env(seed=None, max_distance=None):
     return env
 
 
-def train_sac_throwing_improved(
+def train_sac_throwing(
     total_timesteps: int = 50_000,
     learning_rate: float = 5e-5,  # Even lower for stability
     save_dir: str = "models_sac_throwing",
@@ -165,8 +165,8 @@ if __name__ == "__main__":
     print("IMPROVED 2D THROWING TRAINING")
     print("=" * 80 + "\n")
 
-    model, save_path = train_sac_throwing_improved(
-        total_timesteps=50_000,
+    model, save_path = train_sac_throwing(
+        total_timesteps=250_000,
         learning_rate=5e-5,
         use_curriculum=True,
     )
