@@ -17,9 +17,33 @@ Bc = np.array([[0.2150, 0.43, 0.4799, 0.0307]]).T  # Coefficients de friction de
 #    [[0.0838, 0.6701, 0.6156, 0.0275]]
 # ).T  # Coulomb coefficients // TODO : voir si on trouve mieux la c'était en commentaire du fichier avec toute la dynamique
 Valim = 12.0  # Tension d'alimentation du moteur (V)
-R = 1 / (12 / 4.4)  # Resistance électrique du moteur (Ohm)
-ktGR = 1.5 * 10.6 / 4.4
-kvGR = 12 / (30 * 2 * np.pi / 60)
+C_R = 1 / (12 / 4.4)  # Resistance électrique du moteur (Ohm)
+R = np.array(
+    [
+        C_R,
+        C_R,
+        C_R,
+        5.21,
+    ]
+)
+ktGR = np.array(
+    [
+        10.6 / 4.4,
+        1.5 * 10.6 / 4.4,
+        10.6 / 4.4 / 2,
+        0.005 * 353.5,
+    ]
+)
+C_kvGR = 12 / (30 * 2 * np.pi / 60)
+kvGR = np.array(
+    [
+        C_kvGR,
+        C_kvGR,
+        C_kvGR,
+        0.007 * 353.5,
+    ]
+)
+
 
 # Paramètres du manipulateur (Longueurs en mètres)
 L1 = 0.1400
@@ -520,6 +544,6 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
             Vcmd.ravel() / Valim,
         )
 
-    return tau_cmd
+    # return tau_cmd
 
     return pwm
