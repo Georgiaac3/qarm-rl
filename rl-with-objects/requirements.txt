@@ -12,6 +12,7 @@ stable-baselines3>=2.0.0
 
 # Training utilities
 tqdm>=4.65.0
+rich>=14.0.0
 matplotlib>=3.5.0
 
 # Development
