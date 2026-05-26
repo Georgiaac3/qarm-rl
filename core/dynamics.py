@@ -25,7 +25,9 @@ R = np.array(
         C_R,
         5.21,
     ]
-)
+).reshape(
+    4, 1
+)  # Résistances électriques équivalentes pour chaque moteur (Ohm)
 ktGR = np.array(
     [
         10.6 / 4.4,
@@ -33,7 +35,9 @@ ktGR = np.array(
         10.6 / 4.4 / 2,
         0.005 * 353.5,
     ]
-)
+).reshape(
+    4, 1
+)  # Coefficients de conversion du torque en tension (N.m/A)
 C_kvGR = 12 / (30 * 2 * np.pi / 60)
 kvGR = np.array(
     [
@@ -42,7 +46,9 @@ kvGR = np.array(
         C_kvGR,
         0.007 * 353.5,
     ]
-)
+).reshape(
+    4, 1
+)  # Coefficients de conversion de la vitesse angulaire en tension (V.s/rad)
 
 
 # Paramètres du manipulateur (Longueurs en mètres)
