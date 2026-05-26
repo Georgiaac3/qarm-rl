@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rl-with-objects"
+version = "0.1.0"
+description = "Vision-based bin picking with variable objects and TossingBot-style grasping"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    {name = "RL Lab", email = "rl-lab@example.com"},
+]
+license = {text = "MIT"}
+
+dependencies = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "numpy>=1.23.0",
+    "opencv-python>=4.6.0",
+    "gymnasium>=0.28.0",
+    "stable-baselines3>=2.0.0",
+    "tqdm>=4.65.0",
+    "matplotlib>=3.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.2.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/rl-lab/rl-with-objects"
+Documentation = "https://github.com/rl-lab/rl-with-objects/blob/main/README.md"
+Repository = "https://github.com/rl-lab/rl-with-objects.git"
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
