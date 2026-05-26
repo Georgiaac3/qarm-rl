@@ -63,12 +63,19 @@ class QARMReal(QARMInterface):
         self.I3 = np.eye(3)  # Matrice identité 3x3 pré-allouée pour le calcul du Jacobien
         # self.Kp = np.diag([25, 25, 35])
         # self.Kd = np.diag([10, 10, 12])
+        # 200, 90, ??
         self.Kp = 200 * np.diag(
             [1, 1, 1]
         )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.Kd = 90 * np.diag(
             [1, 1, 1]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
+        self.Ki = 0 * np.diag(
+            [1, 1, 1]
+        )  # Gains intégrals pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
+        self.integral_error = np.zeros(
+            (3, 1)
+        )  # Terme intégral initialisé à zéro pour le contrôle en position
         self.lambda_damping = 0.05  # Facteur de damping pour l'inversion du Jacobien
 
         ########################################
@@ -401,7 +408,13 @@ class QARMReal(QARMInterface):
         ddX_des = waypoint_desired.acceleration
 
         # 3. Commande et inversion
-        ddX_cmd = ddX_des + self.Kp @ (X_des - X_mes) + self.Kd @ (dX_des - dX_mes)
+        ddX_cmd = (
+            ddX_des
+            + self.Kp @ (X_des - X_mes)
+            + self.Kd @ (dX_des - dX_mes)
+            + self.Ki @ self.integral_error
+        )
+        self.integral_error += (X_des - X_mes) * settings.timestep
 
         # Damped Least Squares pour l'inversion du Jacobien
         dJ = self.get_djacobian(q_mes, dq_mes)

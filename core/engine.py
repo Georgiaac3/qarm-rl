@@ -11,6 +11,8 @@ import numpy as np
 import psutil
 
 from core.config import MODE, settings
+from core.missions.circle_mission import CircleMission
+from core.missions.square_mission import SquareMission
 from core.missions.trajectory_mission import MultiTrajectoryMission
 from core.qarm.real import QARMReal
 from core.qarm.sim import QARMSim
@@ -48,6 +50,27 @@ def run_robot(data_queue=None, stop_event=None):
     # Connecting to the robot via udp
     robot.connect()
     # robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
+
+    mission_circle = CircleMission(
+        center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
+        radius=0.2,
+        plane=np.array([1.0, 0.0, 0.0]).reshape(3, 1),
+        nb_of_circles=1,
+        time_per_circle=10.0,
+    )
+
+    mission_square = SquareMission(
+        center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
+        side_length=0.4,
+        plane=np.array([1.0, 0.0, 1.0]).reshape(3, 1),
+        nb_of_squares=5,
+        time_per_side=5.0,
+    )
+
+    robot.missions.append(mission_circle)
+    # mission_square.set_ini_waypoint(mission_circle.waypoints[-1])  # Chaînage des missions pour une transition fluide
+    mission_square.compute_trajectory()  # Calcul de la trajectoire pour la mission carré après avoir défini le waypoint initial
+    robot.missions.append(mission_square)
 
     # Creating missions
     # Mission 1 [Armement du bras]: Se déplacer à une position donnée
