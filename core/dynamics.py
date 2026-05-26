@@ -544,6 +544,9 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
             Vcmd.ravel() / Valim,
         )
 
-    # return tau_cmd
+    what_to_return = "tau_cmd"
 
-    return pwm
+    if what_to_return == "tau_cmd":
+        return tau_cmd
+    else:
+        return pwm
