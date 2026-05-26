@@ -70,7 +70,7 @@ class QARMReal(QARMInterface):
         self.Kd = 90 * np.diag(
             [1, 1, 1]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Ki = 0 * np.diag(
+        self.Ki = 0* np.diag(
             [1, 1, 1]
         )  # Gains intégrals pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.integral_error = np.zeros(

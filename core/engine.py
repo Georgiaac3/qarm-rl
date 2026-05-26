@@ -49,13 +49,20 @@ def run_robot(data_queue=None, stop_event=None):
 
     # Connecting to the robot via udp
     robot.connect()
-    # robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
+    #robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
+
+    point = Waypoint(position=np.array([0.6, -0.075, 0]).reshape(3,1), velocity=None, acceleration=None)
+    mission_go_to = MultiTrajectoryMission(point)
+    mission_go_to.set_ini_waypoint(Waypoint(position=np.array([0., 0., 0.6]).reshape(3,1), velocity=None, acceleration=None))
+    mission_go_to.compute_trajectory()
+    #robot.missions.append(mission_go_to)
+
 
     mission_circle = CircleMission(
         center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
         radius=0.2,
         plane=np.array([1.0, 0.0, 0.0]).reshape(3, 1),
-        nb_of_circles=1,
+        nb_of_circles=5,
         time_per_circle=10.0,
     )
 

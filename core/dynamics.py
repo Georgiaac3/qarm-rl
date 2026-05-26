@@ -28,23 +28,34 @@ R = np.array(
 ).reshape(
     4, 1
 )  # Résistances électriques équivalentes pour chaque moteur (Ohm)
+C_ktGR = 10.6 / 4.4
 ktGR = np.array(
     [
-        10.6 / 4.4,
-        1.5 * 10.6 / 4.4,
-        10.6 / 4.4 / 2,
-        0.005 * 353.5,
+        0.5* C_ktGR,
+        0.8 * C_ktGR,
+        C_ktGR / 3,
+        100000000000, #0.005 * 353.5,
     ]
 ).reshape(
     4, 1
 )  # Coefficients de conversion du torque en tension (N.m/A)
+# ktGR = np.array(
+#     [
+#         C_ktGR,
+#         1.5 * C_ktGR,
+#         C_ktGR / 2,
+#         100000000000,
+#     ]
+# ).reshape(
+#     4, 1
+# )  # Coefficients de conversion du torque en tension (N.m/A)
 C_kvGR = 12 / (30 * 2 * np.pi / 60)
 kvGR = np.array(
     [
         C_kvGR,
         C_kvGR,
         C_kvGR,
-        0.007 * 353.5,
+        100000000000, #0.007 * 353.5,
     ]
 ).reshape(
     4, 1
@@ -535,13 +546,11 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     # print(dq_geo_mes.ravel())
 
     # 3. Conversion du torque en signal de tension (V) à envoyer au moteur
-    Vcmd = (R / ktGR) * tau_cmd  # + kvGR * dq_geo_mes
+    Vcmd = (R / ktGR) * tau_cmd + kvGR * dq_geo_mes
 
-    # mutliply by 2 the voltage command of the first motor because there are 2 motors in parallel for the first joint
-    # Vcmd[0, 0] *= 2
+    Vcmd[3] = 0.
 
     # 4. Normalisation du signal de tension entre -1 et 1
-    # pwm = np.clip(Vcmd / (10 * Valim), -1, 1)
     pwm = np.clip(Vcmd / Valim, -1, 1)
 
     if np.any(Vcmd / Valim > 1) or np.any(Vcmd / Valim < -1):
@@ -550,7 +559,7 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
             Vcmd.ravel() / Valim,
         )
 
-    what_to_return = "tau_cmd"
+    what_to_return = "pwm"
 
     if what_to_return == "tau_cmd":
         return tau_cmd
