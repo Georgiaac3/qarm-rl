@@ -80,22 +80,73 @@ class CurriculumCallback(BaseCallback):
 
 class MetricsCallback(BaseCallback):
     """
-    Track detailed metrics during training.
+    Track detailed metrics (grasps, throws, rewards) during evaluation.
+    Runs full episodes and logs granular statistics.
     """
 
-    def __init__(self, eval_freq: int = 5000):
+    def __init__(self, eval_env, eval_freq: int = 5000, n_eval_episodes: int = 3):
         super().__init__()
+        self.eval_env = eval_env
         self.eval_freq = eval_freq
-        self.metrics = defaultdict(list)
+        self.n_eval_episodes = n_eval_episodes
+        self.last_eval_step = 0
 
     def _on_step(self) -> bool:
-        """Called after every step."""
-        # Track episode rewards
-        if len(self.model.ep_info_buffer) > 0:
-            ep_returns = [ep_info["r"] for ep_info in self.model.ep_info_buffer]
-            self.metrics["episode_rewards"].extend(ep_returns)
+        """Called after every step - run eval at intervals."""
+        if self.num_timesteps - self.last_eval_step >= self.eval_freq:
+            self._run_eval()
+            self.last_eval_step = self.num_timesteps
 
         return True
+
+    def _run_eval(self):
+        """Run evaluation episodes and track metrics."""
+        # Get unwrapped env to access grasp/throw info
+        eval_env_unwrapped = self.eval_env.unwrapped if hasattr(self.eval_env, 'unwrapped') else self.eval_env
+        
+        # Initialize tracking
+        episode_rewards = []
+        episode_grasps = []
+        episode_throws = []
+        episode_removals = []
+
+        for ep in range(self.n_eval_episodes):
+            obs, info = eval_env_unwrapped.reset()
+            episode_reward = 0.0
+            episode_grasp_count = 0
+            episode_throw_count = 0
+            initial_objects = info.get('n_objects', eval_env_unwrapped.n_objects)
+
+            # Run episode
+            for step in range(eval_env_unwrapped.max_steps):
+                # Use trained model to get action
+                action, _ = self.model.predict(obs, deterministic=True)
+                obs, reward, terminated, truncated, info = eval_env_unwrapped.step(action)
+                
+                episode_reward += reward
+                if info.get('grasp_success', False):
+                    episode_grasp_count += 1
+                if info.get('thrown', False):
+                    episode_throw_count += 1
+                
+                if terminated or truncated:
+                    break
+
+            objects_removed = initial_objects - info.get('objects_remaining', 0)
+            episode_rewards.append(episode_reward)
+            episode_grasps.append(episode_grasp_count)
+            episode_throws.append(episode_throw_count)
+            episode_removals.append(objects_removed)
+
+        # Log statistics
+        print("\n" + "=" * 80)
+        print(f"📊 EVAL @ STEP {self.num_timesteps:7d} | Episodes: {self.n_eval_episodes}")
+        print("=" * 80)
+        print(f"  Reward        | Mean: {np.mean(episode_rewards):+7.2f} | Std: {np.std(episode_rewards):6.2f}")
+        print(f"  Grasps/ep     | Mean: {np.mean(episode_grasps):6.2f} | Total: {int(np.sum(episode_grasps))}")
+        print(f"  Throws/ep     | Mean: {np.mean(episode_throws):6.2f} | Total: {int(np.sum(episode_throws))}")
+        print(f"  Objects/ep    | Mean: {np.mean(episode_removals):6.2f} | Success: {int(np.all(np.array(episode_removals) > 0))}/{self.n_eval_episodes}")
+        print("=" * 80 + "\n")
 
 
 def train_rl_with_curriculum(
@@ -214,6 +265,12 @@ def train_rl_with_curriculum(
         deterministic=False,
     )
 
+    metrics_callback = MetricsCallback(
+        eval_env=eval_env,
+        eval_freq=eval_freq,
+        n_eval_episodes=3,
+    )
+
     # Training
     print(f"\n{'='*80}")
     print("STARTING TRAINING")
@@ -224,14 +281,14 @@ def train_rl_with_curriculum(
         if use_curriculum:
             model.learn(
                 total_timesteps=total_timesteps,
-                callback=[curriculum_callback, checkpoint_callback, eval_callback],
+                callback=[curriculum_callback, checkpoint_callback, eval_callback, metrics_callback],
                 progress_bar=True,
             )
         else:
             # Baseline: no curriculum
             model.learn(
                 total_timesteps=total_timesteps,
-                callback=[checkpoint_callback, eval_callback],
+                callback=[checkpoint_callback, eval_callback, metrics_callback],
                 progress_bar=True,
             )
 

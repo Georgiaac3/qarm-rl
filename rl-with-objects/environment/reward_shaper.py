@@ -110,7 +110,7 @@ class RewardShaper:
                 throw_reward *= 1.2
 
             # Distance bonus (far throw is good)
-            if throw_distance > 0.7:  # Outside bin bounds
+            if throw_distance > 0.25:  # Outside bin bounds
                 throw_reward *= 1.1
 
         reward_parts["throw"] = throw_reward * self.curriculum_bonus

@@ -185,36 +185,64 @@ class BinPickingEnv(gym.Env):
             for obj in self.objects:
                 if obj.position[2] < -0.05:  # Below table, ignore
                     continue
-                obj.update_physics(dt=dt)
+                
+                # If object is grasped, hold position (no gravity)
+                if obj.is_grasped:
+                    # Keep at current position, only apply thrown velocity
+                    obj.velocity[2] *= 0.99  # Don't apply gravity
+                else:
+                    # Normal physics for non-grasped objects
+                    obj.update_physics(dt=dt)
 
                 # Collision detection: simple bin boundaries
                 bounds = self.workspace_bounds
 
-                # Clamp position to bin bounds (simple box collision)
-                obj.position[0] = np.clip(obj.position[0], bounds["x"][0], bounds["x"][1])
-                obj.position[1] = np.clip(obj.position[1], bounds["y"][0], bounds["y"][1])
-                obj.position[2] = np.clip(obj.position[2], bounds["z"][0], bounds["z"][1])
+                # For grasped objects, allow upward movement (don't clamp z bottom)
+                if obj.is_grasped:
+                    # Only clamp x, y (horizontal bounds)
+                    obj.position[0] = np.clip(obj.position[0], bounds["x"][0], bounds["x"][1])
+                    obj.position[1] = np.clip(obj.position[1], bounds["y"][0], bounds["y"][1])
+                    # Allow z to go above workspace (throw out)
+                    obj.position[2] = np.clip(obj.position[2], bounds["z"][0], np.inf)
+                else:
+                    # Normal clamping for un-grasped objects
+                    obj.position[0] = np.clip(obj.position[0], bounds["x"][0], bounds["x"][1])
+                    obj.position[1] = np.clip(obj.position[1], bounds["y"][0], bounds["y"][1])
+                    obj.position[2] = np.clip(obj.position[2], bounds["z"][0], bounds["z"][1])
 
                 # Zero out velocity if hitting boundary (energy loss via collision)
-                if (
+                collision_flags = (
                     obj.position[0] == bounds["x"][0]
                     or obj.position[0] == bounds["x"][1]
                     or obj.position[1] == bounds["y"][0]
                     or obj.position[1] == bounds["y"][1]
-                    or obj.position[2] == bounds["z"][0]
-                ):  # Hit ground
+                    or (obj.position[2] == bounds["z"][0] and not obj.is_grasped)
+                )  # Only count z collision if not grasped
+                
+                if collision_flags:
                     obj.velocity *= 0.5  # Damping on collision
-                    collision_detected = True
+                    # Only count collision if object is not grasped
+                    if not obj.is_grasped:
+                        collision_detected = True
 
                 # Check if object left bin (thrown out by velocity)
                 if grasped_obj and obj == grasped_obj:
                     bin_center = np.array([0.4, 0.0])
                     throw_distance = np.linalg.norm(obj.position[:2] - bin_center)
-                    if obj.position[2] > 0.3 or throw_distance > 0.7:
+                    # Bin radius ~ 0.35m, throw success if outside (distance > 0.25 = easier)
+                    if obj.position[2] > 0.25 or throw_distance > 0.25:
                         thrown = True
+                        # Once thrown, object is no longer grasped
+                        obj.is_grasped = False
 
         self.sim_time += 0.1
         self.step_count += 1
+
+        # Remove objects that left the bin (thrown out)
+        if thrown and grasped_obj:
+            self.objects.remove(grasped_obj)
+            grasped_obj.is_grasped = False
+            self.grasped_object = None
 
         # Use advanced reward shaping
         objects_remaining = len([obj for obj in self.objects if obj.position[2] >= 0.0])
@@ -260,36 +288,52 @@ class BinPickingEnv(gym.Env):
         Returns:
             (success, grasped_object, grasp_distance)
         """
-        # Convert pixel to world coordinates using camera model
-        world_pos = self._pixel_to_world(pixel_x, pixel_y)
-
-        # Find closest object
+        # Find closest object using pixel distance (2D, overhead camera)
+        # This is more forgiving for 3D objects projected to 2D image
         min_distance = np.inf
         closest_obj = None
 
         for obj in self.objects:
-            distance = np.linalg.norm(obj.position - world_pos)
-            if distance < min_distance:
-                min_distance = distance
+            # Project object to pixel space
+            obj_px, obj_py = self._world_to_pixel(obj.position)
+            
+            # Distance in pixel space
+            pixel_distance = np.sqrt((pixel_x - obj_px) ** 2 + (pixel_y - obj_py) ** 2)
+            
+            if pixel_distance < min_distance:
+                min_distance = pixel_distance
                 closest_obj = obj
 
-        # Grasp succeeds if within object radius (with some tolerance)
-        success = min_distance < closest_obj.radius * 2 if closest_obj else False
+        # Grasp succeeds if within grasp radius in pixel space
+        # Radius in pixels: radius_meters * pixels_per_meter
+        # Estimate: ~64 pixels = 0.6m workspace width, so ~107 pixels/meter
+        PIXELS_PER_METER = 64 / 0.6  # ~107
+        grasp_threshold_px = closest_obj.radius * PIXELS_PER_METER * 6 if closest_obj else 0
+        success = min_distance < grasp_threshold_px if closest_obj else False
+
+        # For reward, also compute actual 3D distance for quality bonus
+        world_pos = self._pixel_to_world(pixel_x, pixel_y)
+        grasp_3d_distance = np.linalg.norm(closest_obj.position - world_pos) if closest_obj else np.inf
 
         if success:
             closest_obj.is_grasped = True
             closest_obj.grasp_position = world_pos.copy()
             self.grasped_object = closest_obj
 
-        return success, closest_obj, min_distance
+        return success, closest_obj, grasp_3d_distance
 
     def _apply_velocity_correction(self, obj: PhysicalObject, vel_correction: np.ndarray):
-        """Apply velocity correction to grasped object (throw impulse)."""
-        # Add velocity to horizontal plane
+        """Apply velocity correction to grasped object (throw impulse).
+        
+        Args:
+            obj: Object to throw
+            vel_correction: Pre-scaled velocity in m/s (from action * 5)
+        """
+        # Add scaled velocity to horizontal plane
         obj.velocity[0] += vel_correction[0]
         obj.velocity[1] += vel_correction[1]
-        # Small upward component
-        obj.velocity[2] += 0.5  # 0.5 m/s upward
+        # Upward component (z boost for throw)
+        obj.velocity[2] += 2.0  # 2 m/s upward boost
 
     def _pixel_to_world(self, pixel_x: int, pixel_y: int) -> np.ndarray:
         """Convert pixel coordinates to world 3D position."""
