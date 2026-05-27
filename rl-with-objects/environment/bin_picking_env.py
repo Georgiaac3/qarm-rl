@@ -159,6 +159,9 @@ class BinPickingEnv(gym.Env):
         # Track previous state for reward calculation
         objects_remaining_before = len([obj for obj in self.objects if obj.position[2] >= 0.0])
 
+        # Reset grasped object from previous step (no persistence between steps)
+        self.grasped_object = None
+
         # Parse action
         grasp_px = int(np.clip((action[0] + 1) * self.image_width / 2, 0, self.image_width - 1))
         grasp_py = int(np.clip((action[1] + 1) * self.image_height / 2, 0, self.image_height - 1))
@@ -320,7 +323,8 @@ class BinPickingEnv(gym.Env):
             closest_obj.grasp_position = world_pos.copy()
             self.grasped_object = closest_obj
 
-        return success, closest_obj, grasp_3d_distance
+        # Only return closest_obj if grasp succeeded
+        return success, closest_obj if success else None, grasp_3d_distance
 
     def _apply_velocity_correction(self, obj: PhysicalObject, vel_correction: np.ndarray):
         """Apply velocity correction to grasped object (throw impulse).

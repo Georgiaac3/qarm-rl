@@ -115,7 +115,11 @@ class MetricsCallback(BaseCallback):
             episode_reward = 0.0
             episode_grasp_count = 0
             episode_throw_count = 0
+            objects_cleared = 0
             initial_objects = info.get('n_objects', eval_env_unwrapped.n_objects)
+            
+            # Track if ANY object was removed during episode
+            objects_in_bin_start = initial_objects
 
             # Run episode
             for step in range(eval_env_unwrapped.max_steps):
@@ -124,19 +128,27 @@ class MetricsCallback(BaseCallback):
                 obs, reward, terminated, truncated, info = eval_env_unwrapped.step(action)
                 
                 episode_reward += reward
-                if info.get('grasp_success', False):
+                
+                # Track metrics ONLY if they appear in info
+                if 'grasp_success' in info and info['grasp_success']:
                     episode_grasp_count += 1
-                if info.get('thrown', False):
+                    
+                if 'thrown' in info and info['thrown']:
                     episode_throw_count += 1
+                
+                # Track objects remaining
+                objects_in_bin_current = info.get('objects_remaining', 0)
                 
                 if terminated or truncated:
                     break
-
-            objects_removed = initial_objects - info.get('objects_remaining', 0)
+            
+            # Objects cleared = initial - final
+            objects_cleared = initial_objects - objects_in_bin_current
+            
             episode_rewards.append(episode_reward)
             episode_grasps.append(episode_grasp_count)
             episode_throws.append(episode_throw_count)
-            episode_removals.append(objects_removed)
+            episode_removals.append(objects_cleared)
 
         # Log statistics
         print("\n" + "=" * 80)
@@ -145,7 +157,7 @@ class MetricsCallback(BaseCallback):
         print(f"  Reward        | Mean: {np.mean(episode_rewards):+7.2f} | Std: {np.std(episode_rewards):6.2f}")
         print(f"  Grasps/ep     | Mean: {np.mean(episode_grasps):6.2f} | Total: {int(np.sum(episode_grasps))}")
         print(f"  Throws/ep     | Mean: {np.mean(episode_throws):6.2f} | Total: {int(np.sum(episode_throws))}")
-        print(f"  Objects/ep    | Mean: {np.mean(episode_removals):6.2f} | Success: {int(np.all(np.array(episode_removals) > 0))}/{self.n_eval_episodes}")
+        print(f"  Objects/ep    | Mean: {np.mean(episode_removals):6.2f} | Cleared: {int(np.sum(episode_removals))}/{initial_objects*self.n_eval_episodes}")
         print("=" * 80 + "\n")
 
 
