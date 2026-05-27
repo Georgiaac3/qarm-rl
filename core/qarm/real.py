@@ -3,22 +3,25 @@ import socket
 import struct
 import time
 from collections import deque
+
+# typing imports
 from typing import Optional
 
 import cv2
 import numpy as np
-
-# import pyrealsense2 as rs
 from numpy.typing import NDArray
 
 from core.config import settings
 from core.dynamics import get_pwm, get_trig_values, l1, l2, l3, transform_angles
 from core.missions.stationary_mission import StationaryMission
-from core.qarm.interface import QARMInterface
+from core.qarm.base_controller import QArmController
+from utils.logger import robot_says
 from utils.types import DoNothing, Waypoint
 
+# import pyrealsense2 as rs
 
-class QARMReal(QARMInterface):
+
+class QARMReal(QArmController):
     """Implémentation pour le bras robotique réel avec communication UDP et caméra RealSense."""
 
     def __init__(self):
@@ -28,8 +31,6 @@ class QARMReal(QARMInterface):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", settings.udp_port_recv))
         self.sock.setblocking(False)
-
-        self.last_packet = None  # (0.0,) * 8 -> 4 first coordonnates for the angles, 4 last coordonnates for speeds
 
         #########################
         # Caméra avec RealSense #
@@ -70,7 +71,7 @@ class QARMReal(QARMInterface):
         self.Kd = 90 * np.diag(
             [1, 1, 1]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Ki = 0* np.diag(
+        self.Ki = 0 * np.diag(
             [1, 1, 1]
         )  # Gains intégrals pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.integral_error = np.zeros(
@@ -136,13 +137,13 @@ class QARMReal(QARMInterface):
             logging.info("Connection reset by peer")
 
     # -------------------- Envoi commandes --------------------
-    def send_speeds(self, v: list) -> None:
+    def send_command(self, cmd: list) -> None:
         try:
             message_bytes = struct.pack(
-                "ddddd", v[0], v[1], v[2], v[3], v[4]
+                "ddddd", cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]
             )  # 4 vitesses + 1 commande de préhension
             self.sock.sendto(message_bytes, (settings.udp_ip, settings.udp_port_send))
-            self.last_pwm = v  # Stockage de la dernière commande PWM envoyée pour l'affichage dans l'interface graphique
+            self.last_pwm = cmd  # Stockage de la dernière commande PWM envoyée pour l'affichage dans l'interface graphique
         except (OSError, struct.error) as e:
             logging.error("Erreur UDP envoi: %s", e)
 
@@ -160,26 +161,21 @@ class QARMReal(QARMInterface):
     # -------------------- Connexion --------------------
     def connect(self):
         """
-        Attend la connexion du robot en envoyant périodiquement des commandes de vitesse nulle jusqu'à ce que des angles soient reçus.
+        Establishes the initial connection with the robot by sending zero velocity commands until valid angle data is received, indicating that communication is successful.
         """
-        print(
-            "\n"
-            "################################\n"
-            "#    Tentative de connexion    #\n"
-            "################################"
-        )
+
         connexion = False
         while not connexion:
-            self.send_speeds(
+            self.send_command(
                 [0.0, -0.1, -0.1, 0.0, 0.0]
             )  # Envoi de commandes de vitesse nulle pour initier la communication
             self.update_packet()
             angles = self.read_angles()
             if angles is not None:
-                print("Connexion établie, angles initiaux:", angles)
+                robot_says("Connexion établie, angles initiaux:" + str(angles))
                 connexion = True
             else:
-                print("En attente de connexion...")
+                robot_says("En attente de connexion...")
                 time.sleep(1)
 
     # -------------------- Fermeture --------------------
@@ -195,18 +191,7 @@ class QARMReal(QARMInterface):
         """
         waiting_mission = StationaryMission()
         self.missions.append(waiting_mission)
-        # while waiting_mission.ini_waypoint is None:
-        #    print("En attente de la position actuelle du robot pour renseigner ini_waypoint...")
-        #    self.update_packet()
-        #    angles_phi = self.read_angles()
-        #    if angles_phi is not None:
-        #        q_mes, _, _ = transform_angles(
-        #            np.array(angles_phi).reshape(4, 1), np.zeros((4, 1)), np.zeros((4, 1))
-        #        )
-        #        X_mes = self.forward_kinematics(q_mes)
-        #        waiting_mission.ini_waypoint = Waypoint(position=X_mes)
-        #    time.sleep(0.01)
-        print("Mission de stationnarité initialisée")  # avec la position actuelle du robot.")
+        robot_says("Mission de stationnarité initialisée")  # avec la position actuelle du robot.")
 
     ####
     # -------------------- Contrôle en position --------------------

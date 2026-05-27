@@ -3,6 +3,7 @@ Module de définition de types de données.
 """
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 import numpy as np
@@ -40,6 +41,16 @@ class Waypoint:
         # Vérification des dimensions (Shape)
         if value.shape != (3, 1):
             raise ValueError(f"{name} doit avoir la forme (3, 1), actuelle : {value.shape}")
+
+
+@dataclass
+class CommandEnum(Enum):
+    """
+    Represent the command type : pwm or torques
+    """
+
+    PWM = 0
+    TORQUES = 1
 
 
 @dataclass
