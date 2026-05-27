@@ -51,13 +51,15 @@ class CurriculumCallback(BaseCallback):
         # Update curriculum
         phase = self.curriculum_scheduler.update(self.num_timesteps)
 
-        # Sync curriculum bonus to environment reward shaper
-        self.train_env.curriculum_bonus = phase.reward_bonus
-        self.train_env.reward_shaper.curriculum_bonus = phase.reward_bonus
+        # Sync curriculum bonus to environment reward shaper (unwrap Monitor)
+        train_env_unwrapped = self.train_env.unwrapped
+        train_env_unwrapped.curriculum_bonus = phase.reward_bonus
+        train_env_unwrapped.reward_shaper.curriculum_bonus = phase.reward_bonus
 
         if self.eval_env:
-            self.eval_env.curriculum_bonus = phase.reward_bonus
-            self.eval_env.reward_shaper.curriculum_bonus = phase.reward_bonus
+            eval_env_unwrapped = self.eval_env.unwrapped
+            eval_env_unwrapped.curriculum_bonus = phase.reward_bonus
+            eval_env_unwrapped.reward_shaper.curriculum_bonus = phase.reward_bonus
 
         # Log phase changes
         if phase != self.last_phase:
@@ -121,7 +123,7 @@ def train_rl_with_curriculum(
     print(f"Device: {config['model']['device']}")
 
     # Create curriculum scheduler
-    curriculum_scheduler = CurriculumScheduler(total_timesteps=total_timesteps)
+    curriculum_scheduler = CurriculumScheduler(total_steps=total_timesteps)
 
     # Create training environment
     print("\nInitializing environment...")
