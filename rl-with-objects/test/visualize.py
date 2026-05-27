@@ -15,7 +15,7 @@ import torch
 import cv2
 
 # Add parent dirs to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from environment.bin_picking_env import BinPickingEnv
 from models.pixel_policy import PixelWiseGraspingPolicy
@@ -44,21 +44,47 @@ def visualize_predictions(
     config = get_config()
     device = config["model"]["device"]
     
-    model = PixelWiseGraspingPolicy(
-        in_channels=5,
-        hidden_channels=config["model"]["hidden_channels"],
-    )
-    
-    # Load checkpoint
+    # Prepare model(s)
+    sb3_model = None
+    pixel_model = None
+
+    # Load checkpoint: support both raw PyTorch state_dict and Stable-Baselines3 .zip
     if not Path(model_path).exists():
         print(f"✗ Model not found at {model_path}")
         return
-    
-    checkpoint = torch.load(model_path, map_location=device)
-    model.load_state_dict(checkpoint)
-    model.to(device)
-    model.eval()
-    print(f"✓ Loaded model from {model_path}")
+
+    # SB3 ZIP (policy saved by stable-baselines3)
+    if str(model_path).endswith('.zip'):
+        try:
+            from stable_baselines3 import SAC
+
+            sb3_model = SAC.load(model_path, device=device)
+            print(f"✓ Loaded Stable-Baselines3 model from {model_path}")
+        except Exception as e:
+            print(f"✗ Failed to load SB3 model: {e}")
+            return
+    else:
+        # Assume a raw PyTorch checkpoint for the PixelWiseGraspingPolicy
+        pixel_model = PixelWiseGraspingPolicy(
+            in_channels=5,
+            hidden_channels=config["model"]["hidden_channels"],
+        )
+
+        try:
+            checkpoint = torch.load(model_path, map_location=device)
+            # checkpoint may be a dict with 'state_dict' key
+            if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+                state = checkpoint["state_dict"]
+            else:
+                state = checkpoint
+
+            pixel_model.load_state_dict(state)
+            pixel_model.to(device)
+            pixel_model.eval()
+            print(f"✓ Loaded PixelWise model from {model_path}")
+        except Exception as e:
+            print(f"✗ Failed to load PyTorch checkpoint: {e}")
+            return
     
     # Create environment
     env = BinPickingEnv(
@@ -70,6 +96,7 @@ def visualize_predictions(
     
     obs, info = env.reset()
     print(f"✓ Environment reset with {len(env.objects)} objects")
+    H, W = env.image_height, env.image_width
     
     # Prepare input
     rgb = obs['rgb'].copy()
@@ -82,20 +109,48 @@ def visualize_predictions(
     heatmap_tensor = torch.from_numpy(heatmap).float().to(device).permute(2, 0, 1)
     
     # Get predictions
-    with torch.no_grad():
-        grasp_logits, velocity_pred, confidence_pred = model(
-            rgb_tensor.unsqueeze(0),
-            depth_tensor.unsqueeze(0),
-            heatmap_tensor.unsqueeze(0)
-        )
-        pixel, velocity, confidence = model.predict_action(rgb_tensor, depth_tensor, heatmap_tensor)
+    pixel = (0, 0)
+    velocity = (0.0, 0.0)
+    confidence = 0.0
+    grasp_prob = np.zeros((H, W), dtype=np.float32)
+    velocity_field = np.zeros((H, W, 2), dtype=np.float32)
+    conf_map = np.zeros((H, W), dtype=np.float32)
+
+    if sb3_model is not None:
+        # Use the SB3 policy to predict an action for the current observation
+        # SB3 expects the observation as the env's observation dict
+        action, _ = sb3_model.predict(obs, deterministic=True)
+        # Action format: [grasp_x_norm, grasp_y_norm, vx, vy]
+        act = np.array(action).flatten()
+        px = int(np.clip((act[0] + 1) * W / 2, 0, W - 1))
+        py = int(np.clip((act[1] + 1) * H / 2, 0, H - 1))
+        pixel = (py, px)
+        velocity = (float(act[2]), float(act[3]))
+        confidence = 1.0
+
+        # Make a small gaussian grasp_prob around predicted pixel for visualization
+        yy, xx = np.mgrid[0:H, 0:W]
+        d2 = (yy - pixel[0]) ** 2 + (xx - pixel[1]) ** 2
+        sigma = 4.0
+        grasp_prob = np.exp(-d2 / (2 * sigma ** 2)).astype(np.float32)
+        conf_map = grasp_prob.copy()
+        velocity_field[:, :, 0] = velocity[0]
+        velocity_field[:, :, 1] = velocity[1]
+    else:
+        with torch.no_grad():
+            grasp_logits, velocity_pred, confidence_pred = pixel_model(
+                rgb_tensor.unsqueeze(0),
+                depth_tensor.unsqueeze(0),
+                heatmap_tensor.unsqueeze(0)
+            )
+            pixel, velocity, confidence = pixel_model.predict_action(rgb_tensor, depth_tensor, heatmap_tensor)
+
+            # Convert predictions to numpy
+            grasp_prob = torch.sigmoid(grasp_logits[0, 0]).cpu().numpy()
+            velocity_field = velocity_pred[0].permute(1, 2, 0).cpu().numpy()
+            conf_map = torch.sigmoid(confidence_pred[0, 0]).cpu().numpy()
     
-    # Convert predictions to numpy
-    grasp_prob = torch.sigmoid(grasp_logits[0, 0]).cpu().numpy()
-    velocity_field = velocity_pred[0].permute(1, 2, 0).cpu().numpy()
-    conf_map = torch.sigmoid(confidence_pred[0, 0]).cpu().numpy()
-    
-    H, W = env.image_height, env.image_width
+    # (Predictions already converted in branch above)
     
     # ===== Visualization 1: Input Data
     fig_input = np.zeros((H, W*3, 3), dtype=np.uint8)
