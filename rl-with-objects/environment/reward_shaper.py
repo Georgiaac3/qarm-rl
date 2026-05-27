@@ -25,8 +25,8 @@ class RewardShaper:
     # Reward thresholds and multipliers
     GRASP_BONUS = 10.0
     THROW_BONUS = 50.0
-    Bin_CLEAR_BONUS = 100.0
-    STEP_PENALTY = -1.0
+    BIN_CLEAR_BONUS = 100.0
+    STEP_PENALTY = -0.5
     COLLISION_PENALTY = -5.0
 
     # Distance thresholds for grasp quality
@@ -126,7 +126,7 @@ class RewardShaper:
 
         # Bin cleared bonus
         if objects_remaining == 0:
-            removal_reward = self.Bin_CLEAR_BONUS * self.curriculum_bonus
+            removal_reward = self.BIN_CLEAR_BONUS * self.curriculum_bonus
 
         self.last_n_objects = objects_remaining
         reward_parts["removal"] = removal_reward * self.curriculum_bonus

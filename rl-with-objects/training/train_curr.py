@@ -4,14 +4,11 @@ Improved RL training with curriculum learning and reward shaping.
 Key improvements over baseline:
 1. Curriculum Learning: Progressive difficulty (2 → 5 → 8 objects)
 2. Reward Shaping: Multiple reward components (grasp quality, throw velocity, etc.)
-3. Better Hyperparameters: Larger batch size, more replay buffer
-4. Eval Tracking: Performance metrics per curriculum phase
-5. Better Logging: Detailed breakdown of rewards
+3. Better Logging: Detailed breakdown of rewards
 
 Usage:
     python3 training/train_curr.py                  # Default (250k steps with curriculum)
-    python3 training/train_curr.py --curriculum     # With curriculum (default)
-    python3 training/train_curr.py --nocurriculum   # Without curriculum (baseline)
+    python3 training/train_curr.py --no-curriculum   # Without curriculum (baseline)
     python3 training/train_curr.py --steps 500000   # 500k total steps
 """
 
@@ -28,6 +25,7 @@ from stable_baselines3.common.monitor import Monitor
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import get_config
+import argparse
 from curriculum import CurriculumScheduler
 from environment.bin_picking_env import BinPickingEnv
 
@@ -363,8 +361,6 @@ def train_rl_with_curriculum(
 
 
 if __name__ == "__main__":
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Train bin picking with curriculum learning and reward shaping"
     )

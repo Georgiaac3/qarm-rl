@@ -188,6 +188,9 @@ class BinPickingEnv(gym.Env):
             for obj in self.objects:
                 if obj.position[2] < -0.05:  # Below table, ignore
                     continue
+
+                prev_position = obj.position.copy()
+                prev_velocity = obj.velocity.copy()
                 
                 # If object is grasped, hold position (no gravity)
                 if obj.is_grasped:
@@ -213,14 +216,35 @@ class BinPickingEnv(gym.Env):
                     obj.position[1] = np.clip(obj.position[1], bounds["y"][0], bounds["y"][1])
                     obj.position[2] = np.clip(obj.position[2], bounds["z"][0], bounds["z"][1])
 
-                # Zero out velocity if hitting boundary (energy loss via collision)
-                collision_flags = (
-                    obj.position[0] == bounds["x"][0]
-                    or obj.position[0] == bounds["x"][1]
-                    or obj.position[1] == bounds["y"][0]
-                    or obj.position[1] == bounds["y"][1]
-                    or (obj.position[2] == bounds["z"][0] and not obj.is_grasped)
-                )  # Only count z collision if not grasped
+                # Detect only impact-style collisions (not resting contact)
+                x_hit_min = (
+                    prev_position[0] > bounds["x"][0] + 1e-6
+                    and obj.position[0] <= bounds["x"][0] + 1e-6
+                    and prev_velocity[0] < -0.05
+                )
+                x_hit_max = (
+                    prev_position[0] < bounds["x"][1] - 1e-6
+                    and obj.position[0] >= bounds["x"][1] - 1e-6
+                    and prev_velocity[0] > 0.05
+                )
+                y_hit_min = (
+                    prev_position[1] > bounds["y"][0] + 1e-6
+                    and obj.position[1] <= bounds["y"][0] + 1e-6
+                    and prev_velocity[1] < -0.05
+                )
+                y_hit_max = (
+                    prev_position[1] < bounds["y"][1] - 1e-6
+                    and obj.position[1] >= bounds["y"][1] - 1e-6
+                    and prev_velocity[1] > 0.05
+                )
+                floor_impact = (
+                    not obj.is_grasped
+                    and prev_position[2] > bounds["z"][0] + 1e-4
+                    and obj.position[2] <= bounds["z"][0] + 1e-6
+                    and prev_velocity[2] < -0.2
+                )
+
+                collision_flags = x_hit_min or x_hit_max or y_hit_min or y_hit_max or floor_impact
                 
                 if collision_flags:
                     obj.velocity *= 0.5  # Damping on collision
