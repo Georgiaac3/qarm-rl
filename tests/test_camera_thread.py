@@ -24,6 +24,7 @@ def test_camera_connection():
     logger.info("Starting Camera Thread Test")
     logger.info("=" * 60)
 
+    robot = None
     try:
         robot = QARMReal()
         robot.connect()
@@ -133,13 +134,21 @@ def test_camera_connection():
 
             # Display
             cv2.imshow("Camera Thread Test", display_combined)
+            key = cv2.waitKey(1) & 0xFF
+            if key in (27, ord("q")):
+                logger.info("Exit requested by user")
+                break
+
+            frame_id += 1
         logger.info("✓ Test completed successfully!")
 
     except Exception as e:
         logger.error(f"Test failed: {e}", exc_info=True)
+    finally:
         try:
-            robot.close()
-        except:
+            if robot is not None:
+                robot.close()
+        except Exception:
             pass
 
 
