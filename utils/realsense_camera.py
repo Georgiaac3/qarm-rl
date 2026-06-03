@@ -11,6 +11,15 @@ if frames is not None:
         print(f"Object: {det['label']}")
         print(f"  2D center: {det['center_2d']}")
         print(f"  3D center: {det['center_3d']}")  # (x, y, z) in meters
+
+    # Get heatmap for RL input (grasp probability map)
+    heatmap = robot.camera.get_heatmap(color_frame, depth_frame)
+    # heatmap is shape (480, 640) with values in [0, 1]
+    # Can be fed directly to RL model
+
+    # Or get both grasp probability and velocity map
+    heatmap, velocity_map = robot.camera.get_heatmap_with_velocity(color_frame, depth_frame)
+    # velocity_map guides the grasp speed (0 to 1)
 """
 
 import queue
@@ -18,8 +27,10 @@ import threading
 import time
 from typing import List, Optional, Tuple
 
+import cv2
 import numpy as np
 import pyrealsense2 as rs
+from scipy.ndimage import gaussian_filter
 from ultralytics import YOLO
 
 from core.config import settings
@@ -258,6 +269,105 @@ class RealsenseCamera:
             )
 
         return output
+
+    def get_heatmap(self, frame: np.ndarray, depth_frame=None, sigma: float = 30.0) -> np.ndarray:
+        """
+        Generate a heatmap of grasp probabilities from YOLO detections.
+        Each detected object creates a Gaussian blob centered at its location.
+        Amplitude is proportional to confidence score.
+
+        Args:
+            frame: Input image
+            depth_frame: Optional depth frame for 3D weighting
+            sigma: Standard deviation of Gaussian blobs (in pixels)
+
+        Returns:
+            Heatmap array (H, W) with values in [0, 1] representing grasp probability
+        """
+        # Initialize heatmap
+        heatmap = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.float32)
+
+        # Get detections
+        results = self.model(frame, verbose=False)
+        detections = results[0].boxes
+
+        for detection in detections:
+            conf = float(detection.conf[0])
+            if conf < self.confidence_threshold:
+                continue
+
+            # Get center coordinates
+            xmin, ymin, xmax, ymax = detection.xyxy[0].cpu().numpy().astype(int)
+            u = int((xmin + xmax) / 2)
+            v = int((ymin + ymax) / 2)
+
+            # Create Gaussian blob for this detection
+            y, x = np.ogrid[
+                : frame.shape[0],
+                : frame.shape[1],
+            ]
+            gaussian = np.exp(-((x - u) ** 2 + (y - v) ** 2) / (2 * sigma**2))
+            
+            # Weight by confidence
+            heatmap += gaussian * conf
+
+        # Normalize to [0, 1]
+        max_val = heatmap.max()
+        if max_val > 0:
+            heatmap = heatmap / max_val
+
+        return heatmap
+
+    def get_heatmap_with_velocity(
+        self, frame: np.ndarray, depth_frame=None, sigma: float = 30.0
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Generate heatmap for grasp location and velocity map for grasp speed.
+
+        Args:
+            frame: Input image
+            depth_frame: Optional depth frame
+            sigma: Standard deviation of Gaussian blobs
+
+        Returns:
+            Tuple of (heatmap, velocity_map)
+            - heatmap: Grasp probability map (H, W)
+            - velocity_map: Suggested velocities (H, W) based on confidence
+                           Higher confidence = higher velocity (0 to 1)
+        """
+        heatmap = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.float32)
+        velocity_map = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.float32)
+
+        results = self.model(frame, verbose=False)
+        detections = results[0].boxes
+
+        for detection in detections:
+            conf = float(detection.conf[0])
+            if conf < self.confidence_threshold:
+                continue
+
+            xmin, ymin, xmax, ymax = detection.xyxy[0].cpu().numpy().astype(int)
+            u = int((xmin + xmax) / 2)
+            v = int((ymin + ymax) / 2)
+
+            # Create Gaussian blob
+            y, x = np.ogrid[: frame.shape[0], : frame.shape[1]]
+            gaussian = np.exp(-((x - u) ** 2 + (y - v) ** 2) / (2 * sigma**2))
+
+            # Update heatmap with confidence
+            heatmap += gaussian * conf
+            
+            # Velocity proportional to confidence
+            # (more confident detection = faster grasp)
+            velocity_map += gaussian * conf
+
+        # Normalize
+        max_val = heatmap.max()
+        if max_val > 0:
+            heatmap = heatmap / max_val
+            velocity_map = velocity_map / velocity_map.max() if velocity_map.max() > 0 else velocity_map
+
+        return heatmap, velocity_map
 
     def cleanup(self) -> None:
         """Stop camera thread and clean up resources."""

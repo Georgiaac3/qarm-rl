@@ -59,6 +59,17 @@ def test_camera_connection():
                 except Exception as e:
                     logger.warning(f"Detection error: {e}")
 
+            # Get heatmap
+            try:
+                heatmap = robot.camera.get_heatmap(color_frame, depth_frame)
+                # Colorize heatmap for visualization (jet colormap)
+                heatmap_colored = cv2.applyColorMap(
+                    (heatmap * 255).astype(np.uint8), cv2.COLORMAP_JET
+                )
+            except Exception as e:
+                logger.warning(f"Heatmap error: {e}")
+                heatmap_colored = None
+
             if current_time - last_detection_time < PERSIST_TIME:
                 for detection in last_detections:
                     xmin, ymin, xmax, ymax = detection["bbox"]
@@ -78,6 +89,7 @@ def test_camera_connection():
                         2,
                     )
 
+            # Display FPS
             t_stop = time.perf_counter()
             fps = 1.0 / (t_stop - t_start)
             frame_rate_buffer.append(fps)
@@ -94,18 +106,33 @@ def test_camera_connection():
                 2,
             )
 
+            # Combine display_frame and heatmap
+            display_combined = display_frame.copy()
+            if heatmap_colored is not None:
+                # Stack frames horizontally
+                display_combined = np.hstack([display_frame, heatmap_colored])
+                # Add labels
+                cv2.putText(
+                    display_combined,
+                    "Camera",
+                    (10, display_frame.shape[0] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 255),
+                    1,
+                )
+                cv2.putText(
+                    display_combined,
+                    "Grasp Heatmap",
+                    (display_frame.shape[1] + 10, display_frame.shape[0] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 255),
+                    1,
+                )
+
             # Display
-            cv2.imshow("Camera Thread Test", display_frame)
-
-            # Quit
-            if cv2.waitKey(1) & 0xFF in [ord("q"), ord("Q")]:
-                break
-
-            frame_id += 1
-
-        cv2.destroyAllWindows()
-        robot.camera.stop()
-        robot.close()
+            cv2.imshow("Camera Thread Test", display_combined)
         logger.info("✓ Test completed successfully!")
 
     except Exception as e:
