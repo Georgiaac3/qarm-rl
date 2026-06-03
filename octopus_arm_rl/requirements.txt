@@ -1,0 +1,7 @@
+gymnasium>=0.27.0
+stable-baselines3>=1.8.0
+numpy>=1.21.0
+opencv-python>=4.5.0  # Pour le rendering
+matplotlib>=3.4.0      # Optionnel, pour le rendering
+rich
+tqdm
