@@ -34,6 +34,7 @@ from scipy.ndimage import gaussian_filter
 from ultralytics import YOLO
 
 from core.config import settings
+from core.vision.heatmap_processor import HeatmapProcessor
 from utils.logger import logger
 
 
@@ -74,6 +75,9 @@ class RealsenseCamera:
         # Initialize RealSense pipeline
         self.pipeline = rs.pipeline()
         self._initialize_pipeline()
+
+        # Initialize heatmap processor for 3D coordinates
+        self.heatmap_processor = HeatmapProcessor(depth_scale=0.001)
 
         # FPS tracking
         self.frame_rate_buffer: List[float] = []
@@ -368,6 +372,118 @@ class RealsenseCamera:
             velocity_map = velocity_map / velocity_map.max() if velocity_map.max() > 0 else velocity_map
 
         return heatmap, velocity_map
+
+    def get_heatmap_enhanced(self, frame: np.ndarray, depth_frame=None, sigma: float = 30.0):
+        """
+        Generate an enhanced heatmap with 3D real-world coordinates.
+        
+        Returns heatmap with both 2D pixel coordinates and 3D real-world positions.
+        Useful for RL training that requires real-world coordinates.
+
+        Args:
+            frame: Input image
+            depth_frame: RealSense depth frame
+            sigma: Standard deviation of Gaussian blobs (in pixels)
+
+        Returns:
+            Tuple of (heatmap_2d, heatmap_3d, detections_3d)
+            - heatmap_2d: 2D heatmap (H, W) with pixel coordinates
+            - heatmap_3d: 3D-aware heatmap weighted by depth
+            - detections_3d: List of detection dicts with 3D coordinates
+        """
+        if depth_frame is None:
+            logger.warning("depth_frame is None, cannot generate enhanced heatmap")
+            return None, None, []
+
+        # Initialize heatmap processor with depth frame info
+        self.heatmap_processor.initialize_from_realsense(depth_frame)
+
+        # Get standard heatmap
+        heatmap_2d = self.get_heatmap(frame, depth_frame, sigma)
+
+        # Get detections
+        detections = self.get_detections(frame, depth_frame)
+
+        # Process with heatmap processor
+        heatmap_enhanced = self.heatmap_processor.heatmap_to_3d(
+            heatmap_2d,
+            depth_frame,
+            detections=detections,
+            extract_peaks=True,
+            min_distance=15,
+            threshold=0.2
+        )
+
+        # Convert detection points to dict for easy use
+        detections_3d = [
+            {
+                "label": det.label,
+                "position_3d": tuple(det.position_3d),
+                "position_2d": det.position_2d,
+                "confidence": det.confidence,
+                "depth": det.depth,
+            }
+            for det in heatmap_enhanced.peak_coordinates
+        ]
+
+        return heatmap_enhanced.heatmap_2d, heatmap_enhanced.heatmap_3d, detections_3d
+
+    def get_detection_points_3d(
+        self,
+        frame: np.ndarray,
+        depth_frame=None,
+        max_objects: int = 5
+    ) -> List[dict]:
+        """
+        Get detected objects as 3D points in real-world coordinates.
+        
+        Perfect for RL input! Returns coordinates in meters, not pixels.
+
+        Args:
+            frame: Input image
+            depth_frame: RealSense depth frame
+            max_objects: Maximum number of objects to return
+
+        Returns:
+            List of detection dicts:
+            [
+                {
+                    "label": str,
+                    "position_3d": (x, y, z),  # in meters
+                    "position_2d": (u, v),    # in pixels
+                    "confidence": float,
+                    "depth": float,           # in meters
+                },
+                ...
+            ]
+        """
+        if depth_frame is None:
+            logger.warning("depth_frame is None, cannot extract 3D points")
+            return []
+
+        # Get detections with 3D coordinates
+        detections = self.get_detections(frame, depth_frame)
+
+        # Sort by confidence and limit
+        detections_sorted = sorted(
+            detections,
+            key=lambda d: d.get("confidence", 0),
+            reverse=True
+        )[:max_objects]
+
+        # Convert to cleaner format with explicit 3D coordinates
+        result = []
+        for det in detections_sorted:
+            if det["center_3d"] is not None:
+                result.append({
+                    "label": det["label"],
+                    "position_3d": det["center_3d"],  # (x, y, z) in meters
+                    "position_2d": det["center_2d"],  # (u, v) in pixels
+                    "confidence": det["confidence"],
+                    "depth": det["center_3d"][2],  # Extract z as depth
+                })
+
+        return result
 
     def cleanup(self) -> None:
         """Stop camera thread and clean up resources."""
