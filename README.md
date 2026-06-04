@@ -153,3 +153,13 @@ mypy main.py core/ utils/
 - Documenter avec des docstrings (format Google/NumPy)
 - Limiter les lignes à 100 caractères
 - Suivre PEP8 pour le style de code
+
+
+### Kill un process python
+
+Window
+````
+tasklist | findstr python
+taskkill /PID 32436 /F
+````
+Avec 32436 à remplacer avec le process ID correspondant.

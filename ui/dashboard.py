@@ -8,7 +8,7 @@ import dearpygui.dearpygui as dpg
 import numpy as np
 
 from core.config import settings
-from core.dynamics import L1, L2, L3, L4, L5
+from core.dynamics_hold import L1, L2, L3, L4, L5
 
 
 class RealTimeApp:
@@ -24,10 +24,13 @@ class RealTimeApp:
         self.all_2d_vars = [var for group in self.vars_2d_groups.values() for var in group]
         self.vars_3d = settings.graphs_3d
 
-        self.x_data = list(np.linspace(-self.max_seconds, 0, self.max_points))
+        self.x_data = deque(
+            np.linspace(-self.max_seconds, 0, self.max_points).tolist(), maxlen=self.max_points
+        )
         self.y_data = {
             var: deque([0.0] * self.max_points, maxlen=self.max_points) for var in self.all_2d_vars
         }
+        self.x_axes_2d = {}
 
         # Pour la 3D : on stocke les positions brutes (x, y, z)
         self.data_3d = {
@@ -356,6 +359,7 @@ class RealTimeApp:
                             dpg.add_plot_legend()
                             x_axis = dpg.add_plot_axis(dpg.mvXAxis, label="Temps (s)")
                             y_axis = dpg.add_plot_axis(dpg.mvYAxis, label="Valeur")
+                            self.x_axes_2d[group_name] = x_axis
                             for var in signals:
                                 dpg.add_line_series(
                                     self.x_data,
@@ -523,6 +527,8 @@ class RealTimeApp:
             except pyqueue.Empty:
                 break
 
+            packet_time = packet.get("t_s")
+
             # Récupérer les angles du robot
             if "Angles Articulations mesurés (rad)" in packet:
                 current_angles = packet["Angles Articulations mesurés (rad)"]
@@ -550,9 +556,20 @@ class RealTimeApp:
                     self.data_3d[var]["y"].append(float(pos[1]))
                     self.data_3d[var]["z"].append(float(pos[2]))
 
+            if packet_time is not None:
+                self.x_data.append(float(packet_time))
+
         # 3. Rafraîchissement DPG
         for var in self.all_2d_vars:
-            dpg.set_value(f"series_{var}", [self.x_data, list(self.y_data[var])])
+            dpg.set_value(f"series_{var}", [list(self.x_data), list(self.y_data[var])])
+
+        current_time = float(self.x_data[-1]) if len(self.x_data) > 0 else 0.0
+        x_min = current_time - self.max_seconds
+        x_max = current_time
+        for group_name in self.vars_2d_groups:
+            x_axis = self.x_axes_2d.get(group_name)
+            if x_axis is not None:
+                dpg.set_axis_limits(x_axis, x_min, x_max)
 
         # 4. Mise à jour des axes 3D (rotatifs)
         vars_to_update = [v for v in self.vars_3d if v != "Wanted_TCP_Trajectoire"]

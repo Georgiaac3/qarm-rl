@@ -31,10 +31,10 @@ R = np.array(
 C_ktGR = 10.6 / 4.4
 ktGR = np.array(
     [
-        0.5* C_ktGR,
+        0.5 * C_ktGR,
         0.8 * C_ktGR,
         C_ktGR / 3,
-        100000000000, #0.005 * 353.5,
+        100000000000,  # 0.005 * 353.5,
     ]
 ).reshape(
     4, 1
@@ -55,7 +55,7 @@ kvGR = np.array(
         C_kvGR,
         C_kvGR,
         C_kvGR,
-        100000000000, #0.007 * 353.5,
+        100000000000,  # 0.007 * 353.5,
     ]
 ).reshape(
     4, 1
@@ -548,7 +548,7 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     # 3. Conversion du torque en signal de tension (V) à envoyer au moteur
     Vcmd = (R / ktGR) * tau_cmd + kvGR * dq_geo_mes
 
-    Vcmd[3] = 0.
+    Vcmd[3] = 0.0
 
     # 4. Normalisation du signal de tension entre -1 et 1
     pwm = np.clip(Vcmd / Valim, -1, 1)

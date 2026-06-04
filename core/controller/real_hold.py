@@ -12,16 +12,16 @@ import numpy as np
 from numpy.typing import NDArray
 
 from core.config import settings
-from core.dynamics import get_pwm, get_trig_values, l1, l2, l3, transform_angles
+from core.controller.base_controller import PIDController
+from core.dynamics_hold import get_pwm, get_trig_values, l1, l2, l3, transform_angles
 from core.missions.stationary_mission import StationaryMission
-from core.qarm.base_controller import QArmController
 from utils.logger import robot_says
 from utils.types import DoNothing, Waypoint
 
 # import pyrealsense2 as rs
 
 
-class QARMReal(QArmController):
+class QArmReal(PIDController):
     """Implémentation pour le bras robotique réel avec communication UDP et caméra RealSense."""
 
     def __init__(self):

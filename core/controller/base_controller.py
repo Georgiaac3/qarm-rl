@@ -9,12 +9,14 @@ from collections import deque
 from typing import Optional
 
 import numpy as np
+from dynamics.base_dynamics import Dynamics
+
+# Custom imports
+from kinematics.base_kinematics import Kinematics
 from numpy.typing import NDArray
 
 from core.missions.stationary_mission import StationaryMission
 from utils.logger import robot_says, robot_says_phase
-
-# Custom imports
 from utils.types import CommandEnum
 
 
@@ -28,10 +30,20 @@ def connect_decorator(func):
     return wrapper
 
 
-class QArmController(ABC):
+class PIDController(ABC):
     """Contrôleur commun pour simulation ou robot réel."""
 
-    def __init__(self, command_type=CommandEnum.PWM):
+    def __init__(
+        self,
+        dynamics: Dynamics,
+        kinematics: Kinematics,
+        command_type: CommandEnum,
+        Kp,
+        Kd,
+        Ki,
+    ):
+        self.dynamics = dynamics
+        self.kinematics = kinematics
         self.command_type = command_type
 
         ###############################
@@ -44,17 +56,9 @@ class QArmController(ABC):
 
         #######
         # PID
-        self.I3 = np.eye(3)  # Matrice identité 3x3 pré-allouée pour le calcul du Jacobien
-        # 200, 90, ??
-        self.Kp = 200 * np.diag(
-            [1, 1, 1]
-        )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Kd = 90 * np.diag(
-            [1, 1, 1]
-        )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Ki = 0 * np.diag(
-            [1, 1, 1]
-        )  # Gains intégrals pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
+        self.Kp = Kp
+        self.Kd = Kd
+        self.Ki = Ki
         self.integral_error = np.zeros(
             (3, 1)
         )  # Terme intégral initialisé à zéro pour le contrôle en position

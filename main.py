@@ -4,7 +4,8 @@ Point d'entrée du programme. Lance le processus de contrôle du robot et l'inte
 
 import multiprocessing as mp
 
-from core.engine import run_robot
+from routines.routine1 import Routine1
+
 from ui.dashboard import RealTimeApp
 
 if __name__ == "__main__":
@@ -13,7 +14,9 @@ if __name__ == "__main__":
     data_queue = mp.Queue(maxsize=100)
     stop_event = mp.Event()
 
-    process_run_robot = mp.Process(target=run_robot, args=(data_queue, stop_event))
+    routine = Routine1()
+
+    process_run_robot = mp.Process(target=routine.run(), args=(data_queue, stop_event))
     process_run_robot.start()
 
     try:

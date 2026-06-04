@@ -49,14 +49,17 @@ def run_robot(data_queue=None, stop_event=None):
 
     # Connecting to the robot via udp
     robot.connect()
-    #robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
+    # robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
 
-    point = Waypoint(position=np.array([0.6, -0.075, 0]).reshape(3,1), velocity=None, acceleration=None)
+    point = Waypoint(
+        position=np.array([0.6, -0.075, 0]).reshape(3, 1), velocity=None, acceleration=None
+    )
     mission_go_to = MultiTrajectoryMission(point)
-    mission_go_to.set_ini_waypoint(Waypoint(position=np.array([0., 0., 0.6]).reshape(3,1), velocity=None, acceleration=None))
+    mission_go_to.set_ini_waypoint(
+        Waypoint(position=np.array([0.0, 0.0, 0.6]).reshape(3, 1), velocity=None, acceleration=None)
+    )
     mission_go_to.compute_trajectory()
-    #robot.missions.append(mission_go_to)
-
+    # robot.missions.append(mission_go_to)
 
     mission_circle = CircleMission(
         center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
@@ -117,7 +120,8 @@ def run_robot(data_queue=None, stop_event=None):
     mission_amortissement.compute_trajectory()
     robot.missions.append(mission_amortissement)
 
-    next_tick = time.perf_counter() + settings.timestep
+    start_time = time.perf_counter()
+    next_tick = start_time + settings.timestep
 
     print(
         "\n"
@@ -163,6 +167,7 @@ def run_robot(data_queue=None, stop_event=None):
         if data_queue is not None:
             if phi is not None and dphi is not None and robot.last_X_mes is not None:
                 packet = {
+                    "t_s": time.perf_counter() - start_time,
                     "Angles Articulations mesurés (rad)": phi.ravel().tolist(),
                     "Vitesses mesurées (rad/s)": dphi.ravel().tolist(),
                     "TCP_Trajectoire": robot.last_X_mes.ravel().tolist(),
@@ -176,7 +181,11 @@ def run_robot(data_queue=None, stop_event=None):
 
         # --- SYNCHRONISATION TEMPORELLE ---
         while time.perf_counter() < next_tick:
-            pass
+            pass  # semble être la meilleure option pour éviter les dérives temporelles, même si cela peut entraîner une utilisation CPU élevée
             # time.sleep(0.0001)
             # time.sleep(next_tick - time.perf_counter())  # Sleep pour éviter de boucler trop vite
         next_tick += settings.timestep
+
+        # remaining = next_tick - time.perf_counter()
+        # if remaining > 0:
+        #    time.sleep(remaining)
