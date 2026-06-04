@@ -29,26 +29,26 @@ R = np.array(
     4, 1
 )  # Résistances électriques équivalentes pour chaque moteur (Ohm)
 C_ktGR = 10.6 / 4.4
-ktGR = np.array(
-    [
-        0.5* C_ktGR,
-        0.8 * C_ktGR,
-        C_ktGR / 3,
-        100000000000, #0.005 * 353.5,
-    ]
-).reshape(
-    4, 1
-)  # Coefficients de conversion du torque en tension (N.m/A)
 # ktGR = np.array(
 #     [
-#         C_ktGR,
-#         1.5 * C_ktGR,
-#         C_ktGR / 2,
-#         100000000000,
+#         0.5* C_ktGR,
+#         0.8 * C_ktGR,
+#         C_ktGR / 3,
+#         100000000000, #0.005 * 353.5,
 #     ]
 # ).reshape(
 #     4, 1
 # )  # Coefficients de conversion du torque en tension (N.m/A)
+ktGR = np.array(
+    [
+        C_ktGR,
+        1.5 * C_ktGR,
+        C_ktGR , #the original is with the /2 but it's not the case (/1) in the README about the motors dynamic
+        100000000000,
+    ]
+).reshape(
+    4, 1
+)  # Coefficients de conversion du torque en tension (N.m/A)
 C_kvGR = 12 / (30 * 2 * np.pi / 60)
 kvGR = np.array(
     [
@@ -533,24 +533,75 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
 
     # print("vitesses mesurées et accélérations commandées:", dq_geo_mes.ravel(), ddq_geo_cmd.ravel())
 
-    # 2. Calcul du torque total à appliquer
-    tau_cmd = np.array([[0.0, 0.0, 0.0, 0.0]]).T
-    tau_cmd += M @ ddq_geo_cmd
-    tau_cmd += B @ B_signals
-    tau_cmd += C @ dq_geo_mes**2
-    tau_cmd += G
-    tau_cmd += friction
+    # 2. Calcul du couple tau_ext du a la dynamique "géométrique" du robot
+    tau_ext = np.array([[0.0, 0.0, 0.0, 0.0]]).T
+    tau_ext += M @ ddq_geo_cmd # Ce qui fait bouger le robot (consigne voulue et rattrapage de l'erreur), les autres éléments de tau_ext sont du feedforward pour contrer les effets de gravité, coriolis, centrifuge et friction
+    tau_ext += B @ B_signals
+    tau_ext += C @ dq_geo_mes**2
+    tau_ext += G
+    tau_ext += friction
 
-    # return tau_cmd
+    # 3. Calcul des couples liés à la dynamique du moteur
+    # les frottements et l'inertie sont différents de ceux du robot du fait de sa géométrie
+    # on doit ici utiliser les angles brut des moteurs (phi), mais on utilise les vitesses et accélération géométrique des angles car ce sont les mêmes
+    # on doit aussi utliser la vitesse de l'arbre moteur, mais on ne l'a pas : on utilise le Gear Ratio pour transformer les angles des bras en angles arbre moteur
 
-    # print(dq_geo_mes.ravel())
+    GR = 2. #272.5 # Attention ce n'est pas le même GR pour le joint 4
+    Jmotor = np.array([[0.28, 0.28*2, 0.28/2, 0]]).T
+    tau_k = 0.05
+    mu_v = 0.5
 
-    # 3. Conversion du torque en signal de tension (V) à envoyer au moteur
-    Vcmd = (R / ktGR) * tau_cmd + kvGR * dq_geo_mes
+    inertie = Jmotor * GR * ddq_geo_cmd
+    frottements = mu_v * GR * dq_geo_mes + tau_k * np.sign(dq_geo_mes)
+    backFEM = kvGR * dq_geo_mes
+
+    # Formule finale
+    Vcmd = (R/ktGR) * (inertie*GR + frottements*GR + tau_ext * np.array([[1, 1/2, 1, 1]]).T) + backFEM
 
     Vcmd[3] = 0.
 
+
+    """
+
+    # 2 bis : adding friction torque
+    # speed_threshold = 0.02
+    # tau_k = 0.05
+    # mu_v = 0.5
+
+    # tau_friction = np.where(
+    #     np.abs(dq_geo_mes) < speed_threshold,
+    #     0.0,
+    #     mu_v * dq_geo_mes + tau_k * np.sign(dq_geo_mes)
+    # )
+    
+    # tau_cmd += tau_friction
+
+
+
+    # 3. Conversion du torque en signal de tension (V) à envoyer au moteur
+    Vcmd = (R / ktGR) * tau_cmd + kvGR * dq_geo_mes # GR c'est le gear ratio : on veut en effet mettre la vitesse de la broche du moteur la dedans et non pas la vitesse de rotation du bras
+    # le couple tau_cmd est divisé par le GR car on veut le couple vu depuis  le moteur (rapide) avant la réduction
+
+    Vcmd[3] = 0.
+
+    # 3 bis deadband test for stationnary
+    # deadband = 0.04
+    # for i in range(3):
+    #     if Vcmd[i, 0] > 0:
+    #         Vcmd[i, 0] += deadband
+    #     if Vcmd[i, 0] < 0:
+    #         Vcmd[i, 0] -= deadband
+    
+
     # 4. Normalisation du signal de tension entre -1 et 1
+    # il se trouve que dans le qarm de quanser, il y a un gain caché pour reduire la valeur du pwm !!!!!
+    C_K = 3.1
+    K = np.array([[2*C_K, C_K, 2*C_K, 0]]).T
+    pwm = np.clip(K*Vcmd / Valim, -1, 1)
+
+    """
+
+
     pwm = np.clip(Vcmd / Valim, -1, 1)
 
     if np.any(Vcmd / Valim > 1) or np.any(Vcmd / Valim < -1):
@@ -561,7 +612,7 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
 
     what_to_return = "pwm"
 
-    if what_to_return == "tau_cmd":
-        return tau_cmd
+    if what_to_return == "tau_ext":
+        return tau_ext
     else:
         return pwm

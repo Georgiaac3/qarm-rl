@@ -64,10 +64,10 @@ class QARMReal(QARMInterface):
         # self.Kp = np.diag([25, 25, 35])
         # self.Kd = np.diag([10, 10, 12])
         # 200, 90, ??
-        self.Kp = 200 * np.diag(
+        self.Kp = 0 * np.diag(
             [1, 1, 1]
         )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Kd = 90 * np.diag(
+        self.Kd = 0 * np.diag(
             [1, 1, 1]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.Ki = 0* np.diag(

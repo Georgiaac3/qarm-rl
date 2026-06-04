@@ -49,7 +49,7 @@ def run_robot(data_queue=None, stop_event=None):
 
     # Connecting to the robot via udp
     robot.connect()
-    #robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
+    robot.init_stationnary()  # Donne une mission de stationnarité au robot en attendant les commandes de trajectoire
 
     point = Waypoint(position=np.array([0.6, -0.075, 0]).reshape(3,1), velocity=None, acceleration=None)
     mission_go_to = MultiTrajectoryMission(point)
@@ -165,6 +165,7 @@ def run_robot(data_queue=None, stop_event=None):
                 packet = {
                     "Angles Articulations mesurés (rad)": phi.ravel().tolist(),
                     "Vitesses mesurées (rad/s)": dphi.ravel().tolist(),
+                    "PWM envoyés": robot.last_pwm,
                     "TCP_Trajectoire": robot.last_X_mes.ravel().tolist(),
                     "Wanted_TCP_Trajectoire": robot.last_X_des.ravel().tolist(),
                 }
