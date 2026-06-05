@@ -52,7 +52,7 @@ def get_quintic_coeffs_and_time(
 
     a0, a1, a2, a3, a4, a5 = get_coeffs_as_function_of_time(waypoint_start, waypoint_end)
 
-    tf = 5  # Temporaire
+    tf = 1.5  # Temporaire
 
     A = np.concatenate([a0(), a1(), a2(), a3(tf), a4(tf), a5(tf)], axis=1).T
 

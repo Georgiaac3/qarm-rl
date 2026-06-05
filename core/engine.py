@@ -74,10 +74,10 @@ def run_robot(data_queue=None, stop_event=None):
         time_per_side=5.0,
     )
 
-    robot.missions.append(mission_circle)
+    #robot.missions.append(mission_circle)
     # mission_square.set_ini_waypoint(mission_circle.waypoints[-1])  # Chaînage des missions pour une transition fluide
     mission_square.compute_trajectory()  # Calcul de la trajectoire pour la mission carré après avoir défini le waypoint initial
-    robot.missions.append(mission_square)
+    #robot.missions.append(mission_square)
 
     # Creating missions
     # Mission 1 [Armement du bras]: Se déplacer à une position donnée
