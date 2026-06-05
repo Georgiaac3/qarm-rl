@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 # from core.dynamics import Lbras, beta, dq_max, l1, l2, l3
-from src.utils.types import Waypoint
+from src.robot_control.utils.types import Waypoint
 
 
 def get_quintic_coeffs_and_time(

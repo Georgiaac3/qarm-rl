@@ -11,13 +11,13 @@ from typing import Optional
 import numpy as np
 from numpy.typing import NDArray
 
-from src.core.dynamics.base_dynamics import Dynamics
+from src.robot_control.core.base_dynamics import Dynamics
 
 # Custom imports
-from src.core.kinematics.base_kinematics import Kinematics
-from src.core.missions.stationary_mission import StationaryMission
-from src.utils.logger import robot_says, robot_says_phase
-from src.utils.types import CommandEnum
+from src.robot_control.core.base_kinematics import Kinematics
+from src.robot_control.missions.stationary_mission import StationaryMission
+from src.robot_control.utils.logger import robot_says, robot_says_phase
+from src.robot_control.utils.types import CommandEnum
 
 
 def connect_decorator(func):
@@ -38,9 +38,9 @@ class PIDController(ABC):
         dynamics: Dynamics,
         kinematics: Kinematics,
         command_type: CommandEnum,
-        Kp,
-        Kd,
-        Ki,
+        Kp: NDArray[np.float64],
+        Kd: NDArray[np.float64],
+        Ki: NDArray[np.float64],
     ):
         self.dynamics = dynamics
         self.kinematics = kinematics
@@ -71,7 +71,7 @@ class PIDController(ABC):
         self.last_pwm: Optional[list] = None
 
     #################################################################
-    # All the abstract methods are for communication withe the robot
+    # All the abstract methods are for communication with the robot
     @abstractmethod
     def _update_packet(self):
         """

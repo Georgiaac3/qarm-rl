@@ -1,9 +1,9 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from src.core.config import settings
-from src.core.missions.base_mission import Mission
-from src.utils.types import Waypoint
+from config import settings
+from src.robot_control.missions.base_mission import Mission
+from src.robot_control.utils.types import Waypoint
 
 
 class CircleMission(Mission):

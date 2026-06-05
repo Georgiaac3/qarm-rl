@@ -4,8 +4,8 @@ Module contenant la classe StationaryMission, qui représente une mission où le
 
 import numpy as np
 
-from src.core.missions.base_mission import Mission
-from src.utils.types import Waypoint
+from src.robot_control.missions.base_mission import Mission
+from src.robot_control.utils.types import Waypoint
 
 
 class StationaryMission(Mission):

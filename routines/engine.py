@@ -10,13 +10,13 @@ from typing import Union
 import numpy as np
 import psutil
 
+from config import MODE, settings
 from core.qarm.real import QARMReal
 from core.qarm.sim import QARMSim
-from src.core.config import MODE, settings
-from src.core.missions.circle_mission import CircleMission
-from src.core.missions.square_mission import SquareMission
-from src.core.missions.trajectory_mission import MultiTrajectoryMission
-from src.utils.types import Waypoint
+from src.robot_control.missions.circle_mission import CircleMission
+from src.robot_control.missions.square_mission import SquareMission
+from src.robot_control.missions.trajectory_mission import MultiTrajectoryMission
+from src.robot_control.utils.types import Waypoint
 
 process = psutil.Process(os.getpid())
 

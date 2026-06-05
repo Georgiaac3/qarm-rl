@@ -51,10 +51,3 @@ class CommandEnum(Enum):
 
     PWM = 0
     TORQUES = 1
-
-
-@dataclass
-class DoNothing:
-    """Classe informant que la mission est de ne rien faire, utilisée pour les missions DoNothingUntilConditionMission."""
-
-    pass
