@@ -64,13 +64,13 @@ class QARMReal(QARMInterface):
         # self.Kp = np.diag([25, 25, 35])
         # self.Kd = np.diag([10, 10, 12])
         # 200, 90, ??
-        self.Kp = 0 * np.diag(
+        self.Kp = 200 * np.diag(
             [1, 1, 1]
         )  # Gains proportionnels pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Kd = 0 * np.diag(
+        self.Kd = 90 * np.diag(
             [1, 1, 1]
         )  # Gains dérivatifs pour le contrôle en vitesse, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
-        self.Ki = 0* np.diag(
+        self.Ki = 1* np.diag(
             [1, 1, 1]
         )  # Gains intégrals pour le contrôle en position, matrice diagonale pour un contrôle indépendant sur chaque axe (3x3)
         self.integral_error = np.zeros(
@@ -348,6 +348,8 @@ class QARMReal(QARMInterface):
                 - Convertir la commande en accélération articulaire en commande de couple (PWM) avec la dynamique du robot (fonction get_pwm) et en tenant compte de la charge utile de la mission
                 - Envoyer les commandes de vitesse (PWM) au robot avec self.send_speeds
         """
+
+        print(phi_mes.ravel(), dphi_mes.ravel())
 
         if phi_mes.shape != (4, 1) or dphi_mes.shape != (4, 1):
             raise ValueError(

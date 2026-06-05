@@ -39,16 +39,28 @@ C_ktGR = 10.6 / 4.4
 # ).reshape(
 #     4, 1
 # )  # Coefficients de conversion du torque en tension (N.m/A)
+# ktGR = np.array(
+#     [
+#         C_ktGR,
+#         1.5 * C_ktGR,
+#         C_ktGR/2 , #the original is with the /2 but it's not the case (/1) in the README about the motors dynamic
+#         100000000000,
+#     ]
+# ).reshape(
+#     4, 1
+# )  # Coefficients de conversion du torque en tension (N.m/A)
+
 ktGR = np.array(
     [
-        C_ktGR,
-        1.5 * C_ktGR,
-        C_ktGR , #the original is with the /2 but it's not the case (/1) in the README about the motors dynamic
+        0.5* C_ktGR,
+        0.5 * C_ktGR,
+        0.2*C_ktGR,
         100000000000,
     ]
 ).reshape(
     4, 1
 )  # Coefficients de conversion du torque en tension (N.m/A)
+
 C_kvGR = 12 / (30 * 2 * np.pi / 60)
 kvGR = np.array(
     [
@@ -486,7 +498,8 @@ def get_friction(dq):
 
     Remarque : la striction (friction statique) n'est pas prise en compte ni modélisée ici (à faire plus tard si nécessaire !)
     """
-    friction = Bv * dq + Bc * np.sign(dq)
+    #friction = Bv * dq + Bc * np.sign(dq)
+    friction = Bv * dq + Bc * np.tanh(dq)
     return friction
 
 
@@ -546,7 +559,7 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     # on doit ici utiliser les angles brut des moteurs (phi), mais on utilise les vitesses et accélération géométrique des angles car ce sont les mêmes
     # on doit aussi utliser la vitesse de l'arbre moteur, mais on ne l'a pas : on utilise le Gear Ratio pour transformer les angles des bras en angles arbre moteur
 
-    GR = 2. #272.5 # Attention ce n'est pas le même GR pour le joint 4
+    GR = 0#272.5 # Attention ce n'est pas le même GR pour le joint 4
     Jmotor = np.array([[0.28, 0.28*2, 0.28/2, 0]]).T
     tau_k = 0.05
     mu_v = 0.5
@@ -556,10 +569,17 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
     backFEM = kvGR * dq_geo_mes
 
     # Formule finale
-    Vcmd = (R/ktGR) * (inertie*GR + frottements*GR + tau_ext * np.array([[1, 1/2, 1, 1]]).T) + backFEM
-
+    Vcmd = (R/ktGR) * (inertie*GR + frottements*GR + tau_ext * np.array([[1, 1, 1, 1]]).T) + backFEM
     Vcmd[3] = 0.
 
+    tau_s = 0.2
+    relevant = tau_s/10
+
+    Vcmd = np.where(
+        (np.abs(Vcmd) < tau_s) & (np.abs(Vcmd) > relevant),
+        np.sign(Vcmd) * tau_s,
+        Vcmd
+    )
 
     """
 
@@ -601,8 +621,10 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
 
     """
 
+    Valim = 12 # Tension d'alimentation du moteur (V) pour le calcul du pwm, c'est la tension d'alim du moteur et pas celle de la carte d'interface qui est de 12V, il y a un gain de 3.1 entre les deux
 
     pwm = np.clip(Vcmd / Valim, -1, 1)
+    #print(pwm.ravel())
 
     if np.any(Vcmd / Valim > 1) or np.any(Vcmd / Valim < -1):
         print(
@@ -611,6 +633,8 @@ def get_pwm(q_geo_mes, dq_geo_mes, ddq_geo_cmd, mL=0):
         )
 
     what_to_return = "pwm"
+
+    #pwm = np.array([[0., -0.1, -0.2, 0.0]]).T
 
     if what_to_return == "tau_ext":
         return tau_ext
