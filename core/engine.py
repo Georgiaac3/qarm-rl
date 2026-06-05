@@ -82,14 +82,14 @@ def run_robot(data_queue=None, stop_event=None):
     # Creating missions
     # Mission 1 [Armement du bras]: Se déplacer à une position donnée
     waypoint_armement = Waypoint(
-        position=np.array([-0.1, 0.0, 0.5]).reshape(3, 1),
+        position=np.array([0.4, 0.0, 0.2]).reshape(3, 1),
         velocity=None,
         acceleration=None,
     )
     mission_armement = MultiTrajectoryMission(waypoint_armement)
     mission_armement.set_ini_waypoint(
         Waypoint(
-            position=np.array([[4.87569632e-01], [3.86286014e-05], [3.81366771e-01]]),
+            position=np.array([0, 0.0, 0.40]).reshape(3, 1),
             velocity=None,
             acceleration=None,
         )
@@ -98,8 +98,8 @@ def run_robot(data_queue=None, stop_event=None):
     robot.missions.append(mission_armement)
     # Mission 2 [Début du lancé]: Se déplacer à une position donnée
     waypoint_lance = Waypoint(
-        position=np.array([0, 0, 0.8]).reshape(3, 1),
-        velocity=np.array([0.3, 0.0, 0.3]).reshape(3, 1),
+        position=np.array([0.15, 0, 0.70]).reshape(3, 1),
+        velocity=np.array([-0.55, 0.0, 0.45]).reshape(3, 1),
         acceleration=None,
     )
     mission_lance = MultiTrajectoryMission(waypoint_lance)
@@ -108,7 +108,7 @@ def run_robot(data_queue=None, stop_event=None):
     robot.missions.append(mission_lance)
     # Mission 3 [Amortir le lancé]: Se déplacer à une position donnée
     waypoint_amortissement = Waypoint(
-        position=np.array([0.7, 0.0, 0.3]).reshape(3, 1),
+        position=np.array([-0.40, 0.0, 0.75]).reshape(3, 1),
         velocity=None,
         acceleration=None,
     )

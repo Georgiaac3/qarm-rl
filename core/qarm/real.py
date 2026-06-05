@@ -349,8 +349,6 @@ class QARMReal(QARMInterface):
                 - Envoyer les commandes de vitesse (PWM) au robot avec self.send_speeds
         """
 
-        print(phi_mes.ravel(), dphi_mes.ravel())
-
         if phi_mes.shape != (4, 1) or dphi_mes.shape != (4, 1):
             raise ValueError(
                 "phi_mes et dphi_mes doivent être des vecteurs colonne de dimension (4, 1)"
