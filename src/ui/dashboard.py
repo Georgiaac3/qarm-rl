@@ -7,8 +7,8 @@ from collections import deque
 import dearpygui.dearpygui as dpg
 import numpy as np
 
-from core.config import settings
-from core.dynamics_hold import L1, L2, L3, L4, L5
+from src.core.config import settings
+from src.core.dynamics_hold import L1, L2, L3, L4, L5
 
 
 class RealTimeApp:

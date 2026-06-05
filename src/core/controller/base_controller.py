@@ -9,15 +9,15 @@ from collections import deque
 from typing import Optional
 
 import numpy as np
-from dynamics.base_dynamics import Dynamics
-
-# Custom imports
-from kinematics.base_kinematics import Kinematics
 from numpy.typing import NDArray
 
-from core.missions.stationary_mission import StationaryMission
-from utils.logger import robot_says, robot_says_phase
-from utils.types import CommandEnum
+from src.core.dynamics.base_dynamics import Dynamics
+
+# Custom imports
+from src.core.kinematics.base_kinematics import Kinematics
+from src.core.missions.stationary_mission import StationaryMission
+from src.utils.logger import robot_says, robot_says_phase
+from src.utils.types import CommandEnum
 
 
 def connect_decorator(func):

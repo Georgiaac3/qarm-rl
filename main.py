@@ -5,8 +5,7 @@ Point d'entrée du programme. Lance le processus de contrôle du robot et l'inte
 import multiprocessing as mp
 
 from routines.routine1 import Routine1
-
-from ui.dashboard import RealTimeApp
+from src.ui.dashboard import RealTimeApp
 
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)

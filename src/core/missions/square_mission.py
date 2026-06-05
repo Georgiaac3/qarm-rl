@@ -1,7 +1,7 @@
 import numpy as np
 
-from core.missions.trajectory_mission import MultiTrajectoryMission
-from utils.types import Waypoint
+from src.core.missions.trajectory_mission import MultiTrajectoryMission
+from src.utils.types import Waypoint
 
 
 class SquareMission(MultiTrajectoryMission):

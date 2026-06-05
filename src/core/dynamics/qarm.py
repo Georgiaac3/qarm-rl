@@ -1,10 +1,11 @@
 import numpy as np
-from dynamics.base_dynamics import Dynamics
+
+from src.core.dynamics.base_dynamics import Dynamics
 
 
 class QArmDynamics(Dynamics):
 
-    def __init__(self):
+    def __init__(self, QArmData):
         super().__init__()
         # TODO : should take an urdf in the futur to derive everything
 

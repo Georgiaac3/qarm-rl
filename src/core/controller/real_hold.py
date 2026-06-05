@@ -11,12 +11,12 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-from core.config import settings
-from core.controller.base_controller import PIDController
-from core.dynamics_hold import get_pwm, get_trig_values, l1, l2, l3, transform_angles
-from core.missions.stationary_mission import StationaryMission
-from utils.logger import robot_says
-from utils.types import DoNothing, Waypoint
+from src.core.config import settings
+from src.core.controller.base_controller import PIDController
+from src.core.dynamics_hold import get_pwm, get_trig_values, l1, l2, l3, transform_angles
+from src.core.missions.stationary_mission import StationaryMission
+from src.utils.logger import robot_says
+from src.utils.types import DoNothing, Waypoint
 
 # import pyrealsense2 as rs
 

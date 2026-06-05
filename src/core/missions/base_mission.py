@@ -5,7 +5,7 @@ Les missions n'ont pas pour vocation de gérer la boucle de contrôle, mais simp
 
 from abc import ABC, abstractmethod
 
-from utils.types import Waypoint
+from src.utils.types import Waypoint
 
 
 class Mission(ABC):

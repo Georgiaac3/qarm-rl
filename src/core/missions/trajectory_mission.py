@@ -4,9 +4,9 @@ Module de mission de suivi de trajectoire multi-segment.
 
 from typing import List, Optional, Union
 
-from core.missions.base_mission import Mission
-from utils.trajectory import get_desired_state, get_quintic_coeffs_and_time
-from utils.types import Waypoint
+from src.core.missions.base_mission import Mission
+from src.utils.trajectory import get_desired_state, get_quintic_coeffs_and_time
+from src.utils.types import Waypoint
 
 
 class MultiTrajectoryMission(Mission):

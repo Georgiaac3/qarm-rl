@@ -3,10 +3,10 @@ from venv import logger
 
 import numpy as np
 
-from core.config import MODE, settings
 from core.qarm.real import QARMReal
 from core.qarm.sim import QARMSim
-from utils.logger import RobotLogger
+from src.core.config import MODE, settings
+from src.utils.logger import RobotLogger
 
 
 def get_qarm_interface():
