@@ -55,23 +55,6 @@ qarm-rl/
    pip install -r requirements.txt
    ```
 
-4. **Configurer Pre-commit** (recommandé)
-   ```bash
-   pre-commit install
-   ```
-
-   Les hooks pre-commit s'exécuteront automatiquement avant chaque commit pour :
-   - Formater le code avec Black
-   - Trier les imports avec isort
-   - Vérifier la qualité du code avec Flake8
-   - Valider les types avec mypy
-   - Nettoyer les fichiers (espaces, fins de ligne, etc.)
-
-   Pour exécuter manuellement sur tous les fichiers :
-   ```bash
-   pre-commit run --all-files
-   ```
-
 ## Configuration
 
 Toutes les configurations se trouvent dans [`core/config.py`](core/config.py).
@@ -111,45 +94,3 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 ```
-
-## Développement
-
-### Pre-commit Hooks
-
-Le projet utilise pre-commit pour maintenir la qualité du code. Les hooks configurés :
-
-- **trailing-whitespace** : Supprime les espaces en fin de ligne
-- **end-of-file-fixer** : Assure une ligne vide en fin de fichier
-- **black** : Formatage automatique du code Python (ligne max: 100 caractères)
-- **isort** : Tri automatique des imports
-- **flake8** : Vérification de la qualité du code (PEP8)
-- **mypy** : Vérification des types statiques
-
-### Commandes utiles
-
-```bash
-# Installer les hooks (à faire une fois)
-pre-commit install
-
-# Exécuter sur tous les fichiers
-pre-commit run --all-files
-
-# Exécuter sur les fichiers modifiés
-pre-commit run
-
-# Mettre à jour les hooks vers les dernières versions
-pre-commit autoupdate
-
-# Formater un fichier spécifique avec Black
-black main.py
-
-# Vérifier les types avec mypy
-mypy main.py core/ utils/
-```
-
-### Structure de code recommandée
-
-- Utiliser les type hints pour toutes les fonctions
-- Documenter avec des docstrings (format Google/NumPy)
-- Limiter les lignes à 100 caractères
-- Suivre PEP8 pour le style de code
