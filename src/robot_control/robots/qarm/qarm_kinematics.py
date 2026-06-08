@@ -6,13 +6,14 @@ import numpy as np
 
 from robot_control import Kinematics, utils
 
+from .qarm_convertor import QArmConvertor
 from .qarm_data import QArmData
 
 
-class QArmKinematics(Kinematics):
+class QArmKinematics(Kinematics, QArmData, QArmConvertor):
     def __init__(self):
+        super().__init__()
         # TODO : should take an urdf in the futur to derive everything (in the base class Kinematics)
-        self.qarm_data = QArmData()
 
     def get_jacobian(self, q):
         """
@@ -25,23 +26,23 @@ class QArmKinematics(Kinematics):
         if q.shape != (4, 1):
             raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
 
-        c1, s1, c2, s2, c3, s3, c23, s23 = utils.get_trig_values4(q)
+        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*utils.get_trig_values4(q))
 
         J = np.array(
             [
                 [
-                    -self.qarm_data.l2 * s1 * c2 + self.qarm_data.l3 * s1 * s23,
-                    -self.qarm_data.l2 * c1 * s2 - self.qarm_data.l3 * c1 * c23,
-                    -self.qarm_data.l3 * c1 * c23,
+                    -self.l2 * s1 * c2 + self.l3 * s1 * s23,
+                    -self.l2 * c1 * s2 - self.l3 * c1 * c23,
+                    -self.l3 * c1 * c23,
                     0,
                 ],
                 [
-                    self.qarm_data.l2 * c1 * c2 - self.qarm_data.l3 * c1 * s23,
-                    -self.qarm_data.l2 * s1 * s2 - self.qarm_data.l3 * s1 * c23,
-                    -self.qarm_data.l3 * s1 * c23,
+                    self.l2 * c1 * c2 - self.l3 * c1 * s23,
+                    -self.l2 * s1 * s2 - self.l3 * s1 * c23,
+                    -self.l3 * s1 * c23,
                     0,
                 ],
-                [0, -self.qarm_data.l2 * c2 + self.qarm_data.l3 * s23, self.qarm_data.l3 * s23, 0],
+                [0, -self.l2 * c2 + self.l3 * s23, self.l3 * s23, 0],
             ]
         )
 
@@ -63,39 +64,38 @@ class QArmKinematics(Kinematics):
         dq2 = dq[1, 0]
         dq3 = dq[2, 0]
 
-        c1, s1, c2, s2, c3, s3, c23, s23 = utils.get_trig_values4(q)
+        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*utils.get_trig_values4(q))
 
         dJ = np.array(
             [
                 [
-                    (-self.qarm_data.l2 * c1 * c2 + self.qarm_data.l3 * c1 * s23) * dq1
-                    + (self.qarm_data.l2 * s1 * s2 + self.qarm_data.l3 * s1 * c23) * dq2
-                    + (self.qarm_data.l3 * s1 * c23) * dq3,
-                    (self.qarm_data.l2 * s1 * s2 + self.qarm_data.l3 * s1 * c23) * dq1
-                    + (-self.qarm_data.l2 * c1 * c2 + self.qarm_data.l3 * c1 * s23) * dq2
-                    + (self.qarm_data.l3 * c1 * s23) * dq3,
-                    self.qarm_data.l3 * s1 * c23 * dq1
-                    + (self.qarm_data.l3 * c1 * s23) * dq2
-                    + (self.qarm_data.l3 * c1 * s23) * dq3,
+                    (-self.l2 * c1 * c2 + self.l3 * c1 * s23) * dq1
+                    + (self.l2 * s1 * s2 + self.l3 * s1 * c23) * dq2
+                    + (self.l3 * s1 * c23) * dq3,
+                    (self.l2 * s1 * s2 + self.l3 * s1 * c23) * dq1
+                    + (-self.l2 * c1 * c2 + self.l3 * c1 * s23) * dq2
+                    + (self.l3 * c1 * s23) * dq3,
+                    self.l3 * s1 * c23 * dq1
+                    + (self.l3 * c1 * s23) * dq2
+                    + (self.l3 * c1 * s23) * dq3,
                     0,
                 ],
                 [
-                    (-self.qarm_data.l2 * s1 * c2 + self.qarm_data.l3 * s1 * s23) * dq1
-                    + (-self.qarm_data.l2 * c1 * s2 - self.qarm_data.l3 * c1 * c23) * dq2
-                    + (-self.qarm_data.l3 * c1 * c23) * dq3,
-                    (-self.qarm_data.l2 * c1 * s2 - self.qarm_data.l3 * c1 * c23) * dq1
-                    + (-self.qarm_data.l2 * s1 * c2 + self.qarm_data.l3 * s1 * s23) * dq2
-                    + (self.qarm_data.l3 * s1 * s23) * dq3,
-                    -self.qarm_data.l3 * c1 * c23 * dq1
-                    + (self.qarm_data.l3 * s1 * s23) * dq2
-                    + (self.qarm_data.l3 * s1 * s23) * dq3,
+                    (-self.l2 * s1 * c2 + self.l3 * s1 * s23) * dq1
+                    + (-self.l2 * c1 * s2 - self.l3 * c1 * c23) * dq2
+                    + (-self.l3 * c1 * c23) * dq3,
+                    (-self.l2 * c1 * s2 - self.l3 * c1 * c23) * dq1
+                    + (-self.l2 * s1 * c2 + self.l3 * s1 * s23) * dq2
+                    + (self.l3 * s1 * s23) * dq3,
+                    -self.l3 * c1 * c23 * dq1
+                    + (self.l3 * s1 * s23) * dq2
+                    + (self.l3 * s1 * s23) * dq3,
                     0,
                 ],
                 [
                     0,
-                    (self.qarm_data.l2 * s2 + self.qarm_data.l3 * c23) * dq2
-                    + (self.qarm_data.l3 * c23) * dq3,
-                    (self.qarm_data.l3 * c23) * dq2 + (self.qarm_data.l3 * c23) * dq3,
+                    (self.l2 * s2 + self.l3 * c23) * dq2 + (self.l3 * c23) * dq3,
+                    (self.l3 * c23) * dq2 + (self.l3 * c23) * dq3,
                     0,
                 ],
             ]
@@ -113,9 +113,9 @@ class QArmKinematics(Kinematics):
         if q.shape != (4, 1):
             raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
 
-        c1, s1, c2, s2, c3, s3, c23, s23 = utils.get_trig_values4(q)
+        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*utils.get_trig_values4(q))
 
-        x = c1 * (self.qarm_data.l2 * c2 - self.qarm_data.l3 * s23)
-        y = s1 * (self.qarm_data.l2 * c2 - self.qarm_data.l3 * s23)
-        z = self.qarm_data.l1 - self.qarm_data.l2 * s2 - self.qarm_data.l3 * c23
+        x = c1 * (self.l2 * c2 - self.l3 * s23)
+        y = s1 * (self.l2 * c2 - self.l3 * s23)
+        z = self.l1 - self.l2 * s2 - self.l3 * c23
         return np.array([[x], [y], [z]])

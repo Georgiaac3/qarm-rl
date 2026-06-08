@@ -2,25 +2,20 @@ import socket
 import struct
 import time
 
-from robot_control import PIDController
 from robot_control.utils import robot_says
 from robot_control.utils.types import CommandEnum
 
+from .base_qarm_controller import BaseQArmController
 from .qarm_dynamics import QArmDynamics
 from .qarm_kinematics import QArmKinematics
 
 
-class QArmReal(PIDController):
+class RealQArmController(BaseQArmController):
     def __init__(
         self,
-        dynamics: QArmDynamics,
-        kinematics: QArmKinematics,
-        command_type: CommandEnum,
-        Kp,
-        Kd,
-        Ki,
+        command_enum: CommandEnum,
     ):
-        super().__init__(dynamics, kinematics, command_type, Kp, Kd, Ki)
+        super().__init__()
 
         ##############################
         # UDP communication (Simulink)
@@ -30,6 +25,12 @@ class QArmReal(PIDController):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", self.udp_port_recv))
         self.sock.setblocking(False)
+
+        ########################################
+        # Affichage dans l'interface graphique
+        self.last_X_mes: Optional[NDArray[np.float64]] = None
+        self.last_X_des: Optional[NDArray[np.float64]] = None
+        self.last_pwm: Optional[list] = None
 
     def _update_packet(self):
         """

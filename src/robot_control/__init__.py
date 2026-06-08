@@ -1,3 +1,1 @@
-import utils
-
-from .core import Dynamics, Kinematics, PIDController
+from .core import Controller, Dynamics, Kinematics

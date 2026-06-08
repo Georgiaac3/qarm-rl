@@ -2,6 +2,8 @@
 
 Système de contrôle du bras robotique QARM via communication UDP avec Simulink. Implémente une séquence de lancer d'objet avec contrôle proportionnel des vitesses articulaires.
 
+pip install -e .
+
 ## Structure du Projet
 
 ```

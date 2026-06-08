@@ -4,6 +4,8 @@ Base kinematics class. All kinematics classes should inherit from this one.
 
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 
 class Kinematics(ABC):
 
@@ -12,7 +14,7 @@ class Kinematics(ABC):
         pass
 
     @abstractmethod
-    def jacobian(self, q):
+    def jacobian(self, q) -> np.ndarray:
         """
         Compute the Jacobian matrix of the kinematic chain at the given joint angles.
         q: joint angles
@@ -20,7 +22,7 @@ class Kinematics(ABC):
         """
 
     @abstractmethod
-    def djacobian(self, q, qd):
+    def djacobian(self, q, qd) -> np.ndarray:
         """
         Compute the time derivative of the Jacobian matrix of the kinematic chain at the given joint angles and velocities.
         q: joint angles
@@ -29,7 +31,7 @@ class Kinematics(ABC):
         """
 
     @abstractmethod
-    def forward_kinematics(self, q):
+    def forward_kinematics(self, q) -> np.ndarray:
         """
         Compute the forward kinematics of the robot at the given joint angles.
         q: joint angles

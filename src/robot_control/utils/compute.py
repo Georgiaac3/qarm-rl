@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def get_trig_values4(self, q):
+def get_trig_values4(q):
     """
     Calcule les valeurs trigonométriques nécessaires pour les calculs dynamiques et cinématiques à partir d'angles q.
     q: vecteur colonne des angles articulaires de la dynamique géométrique (4, 1)
@@ -16,4 +16,4 @@ def get_trig_values4(self, q):
     c23 = np.cos(q[1, 0] + q[2, 0])
     s23 = np.sin(q[1, 0] + q[2, 0])
 
-    return self.convert_trig_values(c1, s1, c2, s2, c3, s3, c23, s23)
+    return convert_trig_values(c1, s1, c2, s2, c3, s3, c23, s23)

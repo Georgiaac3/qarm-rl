@@ -18,7 +18,7 @@ class Dynamics(ABC):
         pass
 
     @abstractmethod
-    def transform_angles(self, phi, dphi, ddphi):
+    def transform_angles(self, phi, dphi, ddphi) -> tuple:
         """
         Converts the measured angles phi into angles q used for dynamic calculations. This is useful for cases where the robot's angles are not directly the joint angles, such as when using a tendon-driven mechanism. The method should also convert the measured angular velocities dphi and accelerations ddphi into dq and ddq respectively.
         phi: measured angles
