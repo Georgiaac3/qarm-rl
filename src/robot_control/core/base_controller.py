@@ -83,7 +83,7 @@ class Controller(Dynamics, Kinematics, ABC):
     def compute_command(
         self,
         t: float,
-    ) -> NDArray[np.float64]:
+    ) -> Optional[np.ndarray]:
         """
         Gives back the command to sent to the robot based on the current mission and the robot's measured status.
         It should use update_and_get_mission to update the missions queue and get the current mission to execute, then compute the command to execute this mission based on the measured state of the robot.

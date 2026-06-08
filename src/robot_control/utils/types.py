@@ -7,7 +7,16 @@ from enum import Enum
 from typing import Optional
 
 import numpy as np
-from numpy.typing import NDArray
+from jaxtyping import Float
+
+Vector3x1 = Float[np.ndarray, "3 1"]  # Column vector 3x1
+Vector4x1 = Float[np.ndarray, "4 1"]  # Column vector 4x1
+Vector6x1 = Float[np.ndarray, "6 1"]  # Column vector 6x1
+
+Matrix3x3 = Float[np.ndarray, "3 3"]  # 3x3 matrix
+Matrix3x4 = Float[np.ndarray, "3 4"]  # 3x4 matrix
+Matrix4x4 = Float[np.ndarray, "4 4"]  # 4x4 matrix
+Matrix4x6 = Float[np.ndarray, "4 6"]  # 4x6 matrix
 
 
 @dataclass
@@ -17,9 +26,9 @@ class Waypoint:
     Position, vitesse et accélération sont tous des vecteurs colonnes (3x1).
     """
 
-    position: NDArray[np.float64]
-    velocity: Optional[NDArray[np.float64]] = None
-    acceleration: Optional[NDArray[np.float64]] = None
+    position: Vector3x1
+    velocity: Optional[Vector3x1] = None
+    acceleration: Optional[Vector3x1] = None
 
     def __post_init__(self):
         # Initialisation des vitesses et accélérations à zéro si elles ne sont pas fournies
@@ -33,7 +42,7 @@ class Waypoint:
         self._validate_vector("velocity", self.velocity)
         self._validate_vector("acceleration", self.acceleration)
 
-    def _validate_vector(self, name: str, value: NDArray):
+    def _validate_vector(self, name: str, value: Vector3x1):
         # Vérification du type de base
         if not isinstance(value, np.ndarray):
             raise TypeError(f"{name} doit être un numpy.ndarray, pas {type(value)}")
@@ -43,7 +52,6 @@ class Waypoint:
             raise ValueError(f"{name} doit avoir la forme (3, 1), actuelle : {value.shape}")
 
 
-@dataclass
 class CommandEnum(Enum):
     """
     Represent the command type : pwm or torques

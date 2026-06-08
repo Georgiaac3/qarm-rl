@@ -7,6 +7,8 @@ Convention :
 
 from abc import ABC, abstractmethod
 
+from robot_control.utils import Matrix4x4, Matrix4x6, Vector4x1, Vector6x1
+
 
 class Dynamics(ABC):
     """
@@ -18,7 +20,7 @@ class Dynamics(ABC):
         pass
 
     @abstractmethod
-    def transform_angles(self, phi, dphi, ddphi) -> tuple:
+    def transform_angles(self, phi: Vector4x1, dphi: Vector4x1, ddphi: Vector4x1) -> tuple:
         """
         Converts the measured angles phi into angles q used for dynamic calculations. This is useful for cases where the robot's angles are not directly the joint angles, such as when using a tendon-driven mechanism. The method should also convert the measured angular velocities dphi and accelerations ddphi into dq and ddq respectively.
         phi: measured angles
@@ -29,7 +31,7 @@ class Dynamics(ABC):
         """
 
     @abstractmethod
-    def inertia_matrix(self, q, mL=0):
+    def inertia_matrix(self, q: Vector4x1, mL: float = 0) -> Matrix4x4:
         """
         Computes the inertia matrix M(q) of the robot at the given joint configuration q.
         q: joint angles for dynamic calculations
@@ -39,7 +41,7 @@ class Dynamics(ABC):
         """
 
     @abstractmethod
-    def coriolis_matrix(self, q, mL=0):
+    def coriolis_matrix(self, q: Vector4x1, mL: float = 0) -> Matrix4x6:
         """
         Computes the Coriolis matrix B(q) of the robot at the given joint configuration q and joint velocities dq. It should not be confused with C(q, dq) which is the Coriolis and centrifugal forces vector.
         Usage : B @ B_signals
@@ -50,7 +52,7 @@ class Dynamics(ABC):
         """
 
     @abstractmethod
-    def coriolis_velocity_signals(self, dq, mL=0):
+    def coriolis_velocity_signals(self, dq: Vector4x1, mL: float = 0) -> Vector6x1:
         """
         Computes the Coriolis signals [dq_i, dq_j] for all pairs of joints i, j.
         Usage : B @ B_signals
@@ -61,7 +63,7 @@ class Dynamics(ABC):
         """
 
     @abstractmethod
-    def centrifugal_matrix(self, q, mL=0):
+    def centrifugal_matrix(self, q: Vector4x1, mL: float = 0) -> Matrix4x4:
         """
         Computes the centrifugal matrix C(q) of the robot at the given joint configuration q. It should not be confused with B(q) which is the Coriolis matrix.
         Usage : C @ dq_geo_mes**2
@@ -72,7 +74,7 @@ class Dynamics(ABC):
         """
 
     @abstractmethod
-    def gravity_vector(self, q, mL=0):
+    def gravity_vector(self, q: Vector4x1, mL: float = 0) -> Vector4x1:
         """
         Computes the gravity vector G(q) of the robot at the given joint configuration q.
         q: joint angles for dynamic calculations
@@ -82,7 +84,7 @@ class Dynamics(ABC):
         """
 
     @abstractmethod
-    def friction_vector(self, dq):
+    def friction_vector(self, dq: Vector4x1) -> Vector4x1:
         """
         Computes the friction vector F(dq) of the robot at the given joint velocities dq.
         dq: joint velocities for dynamic calculations

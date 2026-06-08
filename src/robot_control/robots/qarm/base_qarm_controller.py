@@ -1,8 +1,10 @@
 from abc import ABC
+from typing import Optional
 
 import numpy as np
 
 from robot_control.core import Controller
+from robot_control.utils import CommandEnum, Matrix3x3
 
 from .qarm_dynamics import QArmDynamics
 from .qarm_kinematics import QArmKinematics
@@ -18,9 +20,9 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
     def __init__(
         self,
         timestep: float,
-        Kp: np.ndarray,
-        Kd: np.ndarray,
-        Ki: np.ndarray,
+        Kp: Matrix3x3,
+        Kd: Matrix3x3,
+        Ki: Matrix3x3,
     ):
         super().__init__()
 
@@ -43,7 +45,7 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
     def compute_command(
         self,
         t: float,
-    ) -> np.ndarray:
+    ) -> Optional[np.ndarray]:
         """
         Met à jour la commande envoyée au robot en fonction de la mission courante et de l'état mesuré du robot.
         - t : temps actuel en secondes
@@ -128,19 +130,19 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         )  # Charge utile, à intégrer dans la dynamique
 
         # 1. Calcul des matrices et vecteurs dynamiques à partir des angles géométriques mesurés
-        M = self.inertia_matrix(q_geo_mes, mL)
-        C = self.centrifugal_matrix(q_geo_mes, mL)
-        G = self.gravity_vector(q_geo_mes, mL)
-        B = self.coriolis_matrix(q_geo_mes, mL)
+        M = self.inertia_matrix(q_mes, mL)
+        C = self.centrifugal_matrix(q_mes, mL)
+        G = self.gravity_vector(q_mes, mL)
+        B = self.coriolis_matrix(q_mes, mL)
 
-        friction = self.friction_vector(dq_geo_mes)
+        friction = self.friction_vector(dq_mes)
 
-        B_signals = self.coriolis_velocity_signals(dq_geo_mes)
+        B_signals = self.coriolis_velocity_signals(dq_mes)
 
         # 2. Calcul du torque total à appliquer
-        tau_cmd = M @ ddq_geo_cmd
+        tau_cmd = M @ ddq_cmd
         tau_cmd += B @ B_signals
-        tau_cmd += C @ dq_geo_mes**2
+        tau_cmd += C @ dq_mes**2
         tau_cmd += G
         tau_cmd += friction
 
@@ -148,7 +150,7 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
             return tau_cmd
 
         # 3. Conversion du torque en signal de tension (V) à envoyer au moteur
-        Vcmd = (self.R / self.ktGR) * tau_cmd + self.kvGR * dq_geo_mes
+        Vcmd = (self.R / self.ktGR) * tau_cmd + self.kvGR * dq_mes
 
         Vcmd[3] = 0.0
 
