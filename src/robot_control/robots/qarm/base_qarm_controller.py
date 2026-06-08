@@ -1,10 +1,12 @@
+import queue
+import time
 from abc import ABC
 from typing import Optional
 
 import numpy as np
 
 from robot_control.core import Controller
-from robot_control.utils import CommandEnum, Matrix3x3
+from robot_control.utils import CommandEnum, Matrix3x3, Vector5x1, robot_says_phase
 
 from .qarm_dynamics import QArmDynamics
 from .qarm_kinematics import QArmKinematics
@@ -20,13 +22,17 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
     def __init__(
         self,
         timestep: float,
+        command_type: CommandEnum,
         Kp: Matrix3x3,
         Kd: Matrix3x3,
         Ki: Matrix3x3,
+        display: bool = False,
+        display_data_queue=None,
     ):
         super().__init__()
 
         self.timestep = timestep
+        self.command_type = command_type  # PWM or TORQUES
 
         ######################
         # Kinetics parameters
@@ -42,16 +48,25 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
             (3, 1)
         )  # Terme intégral initialisé à zéro pour le contrôle en position
 
+        ############################
+        # Display setup
+        if display:
+            self.display = display
+            self.display_data_queue = display_data_queue
+
+            self.last_X_mes = np.zeros((3, 1))
+            self.last_X_des = np.zeros((3, 1))
+            self.last_dX_mes = np.zeros((3, 1))
+            self.last_dX_des = np.zeros((3, 1))
+
     def compute_command(
         self,
         t: float,
-    ) -> Optional[np.ndarray]:
+    ) -> Optional[Vector5x1]:
         """
         Met à jour la commande envoyée au robot en fonction de la mission courante et de l'état mesuré du robot.
         - t : temps actuel en secondes
-        - phi_mes : vecteur colonne des angles articulaires mesurés du moteur (4,1)
-        - dphi_mes : vecteur colonne des vitesses articulaires mesurées du moteur (4,1)
-        - retourne : None, mais envoie les commandes de vitesse (PWM) au robot via self.send_speeds()
+        - Retourne : None ou un vecteur de commande de dimension 5 (4 pour les moteurs + 1 pour le gripper)
         - la logique de contrôle est la suivante :
             1. Si aucune mission, rester stationnaire -> cela ajoute une mission de stationnarité à la queue
             2. Récupération de la prochaine mission (la plus ancienne ajoutée)
@@ -124,12 +139,10 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         )  # Pseudo-inverse with damping
         ddq_cmd = J_dag @ (ddX_cmd - dJ @ dq_mes)  # Commande en accélération articulaire
 
-        # 4. Dynmique du bras et envoi des commandes pwwm
-        mL = (
-            current_mission.load if current_mission.load is not None else 0.0
-        )  # Charge utile, à intégrer dans la dynamique
+        # Payload for the current mission
+        mL = current_mission.load if current_mission.load is not None else 0.0
 
-        # 1. Calcul des matrices et vecteurs dynamiques à partir des angles géométriques mesurés
+        # Computing of dynamic matrices and vectors based on measured geometric angles and payload
         M = self.inertia_matrix(q_mes, mL)
         C = self.centrifugal_matrix(q_mes, mL)
         G = self.gravity_vector(q_mes, mL)
@@ -139,22 +152,18 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
 
         B_signals = self.coriolis_velocity_signals(dq_mes)
 
-        # 2. Calcul du torque total à appliquer
+        # Total torque to be applied
         tau_cmd = M @ ddq_cmd
         tau_cmd += B @ B_signals
         tau_cmd += C @ dq_mes**2
         tau_cmd += G
         tau_cmd += friction
 
-        if self.command_type == CommandEnum.TORQUES:
-            return tau_cmd
-
-        # 3. Conversion du torque en signal de tension (V) à envoyer au moteur
+        # Conversion of torque into a voltage signal (V) to be sent to the motor
+        # !! The GR (Gear Ratio) come from the fact that the equation here take into account the motor shaft
         Vcmd = (self.R / self.ktGR) * tau_cmd + self.kvGR * dq_mes
 
-        Vcmd[3] = 0.0
-
-        # 4. Normalisation du signal de tension entre -1 et 1
+        # Normalization of the voltage signal between -1 and 1
         pwm = np.clip(Vcmd / self.Valim, -1, 1)
 
         if np.any(Vcmd / self.Valim > 1) or np.any(Vcmd / self.Valim < -1):
@@ -163,14 +172,61 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
                 Vcmd.ravel() / self.Valim,
             )
 
-        cmd = cmd.ravel().tolist() + [0.0]
-
         ##############################################
         # Management of the variables for the display
-        self.last_X_mes = X_mes  # Stocker la dernière position mesurée pour l'affichage dans l'interface graphique
-        self.last_X_des = X_des  # Stocker la dernière position de consigne pour l'affichage dans l'interface graphique
+        if self.display:
+            self.last_X_des = X_des
+            self.last_X_mes = X_mes
+            self.last_dX_mes = dX_mes
+            self.last_dX_des = dX_des
 
         ###############################################
         # Return the raw command to be sent to the robot
-        return cmd
-        # self._send_command(cmd)
+        if self.command_type == CommandEnum.TORQUES:
+            return tau_cmd.append(0)  # This is for the gripper
+        return pwm.append(0)
+
+    def go(self):
+        """Boucle de contrôle principale du robot. Lit les données des capteurs, met à jour les missions en cours et envoie les commandes au robot à une fréquence définie."""
+
+        start_time = time.perf_counter()
+        next_tick = start_time + self.timestep
+
+        robot_says_phase("Main control loop of the robot")
+
+        while True:
+            self._update_packet()
+
+            cmd = self.compute_command(time.perf_counter() - start_time)
+            if cmd is not None:
+                self._send_command(cmd)
+
+            if self.display:
+                self._display_variables()
+
+            while time.perf_counter() < next_tick:
+                pass  # Seems to be the best way to have a precise timestep, sleeping is not precise enough
+
+            next_tick += self.timestep
+
+    def _display_variables(self):
+        """Affiche les variables de contrôle dans la console et les envoie à une interface graphique via une queue."""
+        if self.display_data_queue is not None:
+            if (
+                self.last_X_mes is not None
+                and self.last_X_des is not None
+                and self.last_dX_mes is not None
+                and self.last_dX_des is not None
+            ):
+                try:
+                    self.display_data_queue.put(
+                        {
+                            "X_mes": self.last_X_mes.ravel().tolist(),
+                            "X_des": self.last_X_des.ravel().tolist(),
+                            "dX_mes": self.last_dX_mes.ravel().tolist(),
+                            "dX_des": self.last_dX_des.ravel().tolist(),
+                        },
+                        block=False,
+                    )
+                except queue.Full:
+                    pass

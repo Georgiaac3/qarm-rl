@@ -12,6 +12,7 @@ from .types import (
     Matrix4x6,
     Vector3x1,
     Vector4x1,
+    Vector5x1,
     Vector6x1,
     Waypoint,
 )

@@ -34,7 +34,7 @@ class Controller(Dynamics, Kinematics, ABC):
     def __init__(self):
         ###############################
         # Communication with the robot
-        self.last_packet: Optional[list[float]] = None  # Last packet received from the robot
+        self.last_packet: Optional[tuple[float]] = None  # Last packet received from the robot
 
         ############
         # Missions
@@ -87,6 +87,7 @@ class Controller(Dynamics, Kinematics, ABC):
         """
         Gives back the command to sent to the robot based on the current mission and the robot's measured status.
         It should use update_and_get_mission to update the missions queue and get the current mission to execute, then compute the command to execute this mission based on the measured state of the robot.
+        See robots/qarm/base_qarm_controller.py for an example of implementation of this method.
         """
 
     def update_and_get_mission(self, t, X_mes, dX_mes):
@@ -120,25 +121,8 @@ class Controller(Dynamics, Kinematics, ABC):
 
         return current_mission
 
+    @abstractmethod
     def go(self):
-        """Boucle de contrôle principale du robot. Lit les données des capteurs, met à jour les missions en cours et envoie les commandes au robot à une fréquence définie."""
-
-        start_time = time.perf_counter()
-        next_tick = start_time + self.timestep
-
-        robot_says_phase("Main control loop of the robot")
-
-        while True:
-            self._update_packet()
-
-            phi = self._read_joint_angles()
-            dphi = self._read_joint_speeds()
-
-            if phi is not None and dphi is not None:
-                cmd = self.compute_command(time.perf_counter() - start_time, phi, dphi)
-                self._send_command(cmd)
-
-            # affichage ou non -><-
-
-            while time.perf_counter() < next_tick:
-                pass
+        """
+        Boucle de contrôle principale du robot. Lit les données des capteurs, met à jour les missions en cours et envoie les commandes au robot à une fréquence définie.
+        """

@@ -1,7 +1,9 @@
-from robot_control import PIDController
+from genesis.engine.entities import RigidEntity
+
+from .base_qarm_controller import BaseQArmController
 
 
-class QARMSim:
+class QArmSim(BaseQArmController, RigidEntity):
     def __init__(self):
         pass
 

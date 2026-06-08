@@ -11,6 +11,7 @@ from jaxtyping import Float
 
 Vector3x1 = Float[np.ndarray, "3 1"]  # Column vector 3x1
 Vector4x1 = Float[np.ndarray, "4 1"]  # Column vector 4x1
+Vector5x1 = Float[np.ndarray, "5 1"]  # Column vector 5x1
 Vector6x1 = Float[np.ndarray, "6 1"]  # Column vector 6x1
 
 Matrix3x3 = Float[np.ndarray, "3 3"]  # 3x3 matrix

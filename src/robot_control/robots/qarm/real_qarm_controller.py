@@ -2,35 +2,31 @@ import socket
 import struct
 import time
 
-from robot_control.utils import robot_says
-from robot_control.utils.types import CommandEnum
+from robot_control.utils import CommandEnum, Matrix3x3, robot_says
 
 from .base_qarm_controller import BaseQArmController
-from .qarm_dynamics import QArmDynamics
-from .qarm_kinematics import QArmKinematics
 
 
 class RealQArmController(BaseQArmController):
     def __init__(
         self,
-        command_enum: CommandEnum,
+        timestep: float,
+        Kp: Matrix3x3,
+        Kd: Matrix3x3,
+        Ki: Matrix3x3,
+        display: bool = False,
+        display_data_queue=None,
     ):
-        super().__init__()
+        super().__init__(timestep, CommandEnum.PWM, Kp, Kd, Ki, display, display_data_queue)
 
-        ##############################
-        # UDP communication (Simulink)
+        #######################################
+        # UDP communication (Simulink for now)
         self.udp_ip: str = "127.0.0.1"
         self.udp_port_send: int = 5005
         self.udp_port_recv: int = 5006
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", self.udp_port_recv))
         self.sock.setblocking(False)
-
-        ########################################
-        # Affichage dans l'interface graphique
-        self.last_X_mes: Optional[NDArray[np.float64]] = None
-        self.last_X_des: Optional[NDArray[np.float64]] = None
-        self.last_pwm: Optional[list] = None
 
     def _update_packet(self):
         """
@@ -68,9 +64,8 @@ class RealQArmController(BaseQArmController):
         try:
             message_bytes = struct.pack(
                 "ddddd", cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]
-            )  # 4 vitesses + 1 commande de préhension
+            )  # Pack the command as 5 doubles (4 for motors, 1 for gripper)
             self.sock.sendto(message_bytes, (self.udp_ip, self.udp_port_send))
-            self.last_pwm = cmd  # Stockage de la dernière commande PWM envoyée pour l'affichage dans l'interface graphique
         except (OSError, struct.error) as e:
             robot_says(f"Erreur UDP envoi: {e}")
 
@@ -89,7 +84,7 @@ class RealQArmController(BaseQArmController):
                 [0.0, -0.1, -0.1, 0.0, 0.0]
             )  # Envoi de commandes de vitesse nulle pour initier la communication
             self._update_packet()
-            angles = self._read_joint_angles()
+            angles = self.last_packet[:4] if self.last_packet is not None else None
             if angles is not None:
                 robot_says("Connexion established, initial angles:" + str(angles))
                 connexion = True
