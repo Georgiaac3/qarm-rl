@@ -58,3 +58,6 @@ BasicIO_pwm_mode_retest_quarc_win64/
 BasicIO_pwm_mode_retest.slx.autosave
 
 checkpoints/
+*.zip
+*.pkl
+tensorboard/
