@@ -46,7 +46,7 @@ class Routine2:  # (Routine):
         # Mission 2 [Début du lancé]: Se déplacer à une position donnée
         waypoint_lance = Waypoint(
             position=np.array([0.15, 0, 0.70]).reshape(3, 1),
-            velocity=np.array([-0.55, 0.0, 0.45]).reshape(3, 1),
+            velocity=np.array([-1.8, 0.0, 0.7]).reshape(3, 1),
             acceleration=None,
         )
         mission_lance = MultiTrajectoryMission(waypoint_lance)
