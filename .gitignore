@@ -62,3 +62,8 @@ BasicIO_pwm_mode_retest.slx.autosave
 # Generated outputs
 plot_data/*.csv
 video*.mp4
+
+
+*.zip
+*.pkl
+events.out.tfevents.*

@@ -26,6 +26,12 @@ qarm-rl/
 │   └── routine2.py
 ├── rl_envs/
 │   └── qarm_pid_gym_env.py
+├── genesis/
+│   ├── QARM/
+│   ├── gripper.py
+│   ├── replay_plot.py
+│   ├── sim.py
+│   └── sim_udp.py
 ├── src/
 │   └── robot_control/
 │       ├── core/
@@ -92,20 +98,17 @@ python main.py --routine 2
 2. Lancer la simulation.
 3. Lancer ensuite le script Python.
 
+### Simulation sur Genesis
+Vous pouvez tester avec
+
+```bash
+python genesis/sim.py
+```
+Si vous voulez que ce soit plus épuré, mettez `show_link_frame=False` dans les `vis_options`.
+
 ## Configuration
 
 La configuration globale est centralisée dans `config.py` à la racine et dans les modules de `src/robot_control/`.
-
-## Développement
-
-Commandes utiles :
-
-```bash
-pre-commit install
-pre-commit run --all-files
-black main.py src/ routines/
-pytest
-```
 
 ## Notes
 

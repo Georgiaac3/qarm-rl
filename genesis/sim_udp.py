@@ -46,7 +46,7 @@ scene = gs.Scene(
     vis_options=gs.options.VisOptions(
         show_world_frame=True,  # visualize the coordinate frame of `world` at its origin
         world_frame_size=1.0,  # length of the world frame in meter
-        show_link_frame=True,  # visualizing the coordinate frames of entity links
+        show_link_frame=False,  # visualizing the coordinate frames of entity links
         show_cameras=False,  # do not visualize mesh and frustum of the cameras added
         plane_reflection=False,  # turn off plane reflection
         ambient_light=(0.1, 0.1, 0.1),  # ambient light setting
@@ -64,6 +64,7 @@ scene = gs.Scene(
 # ------------------------------- add entities ------------------------------
 plane = scene.add_entity(gs.morphs.Plane())
 qarm = scene.add_entity(
+    # genesis/QARM/urdf/qarm_with_gripper.urdf
     gs.morphs.URDF(file="genesis/QARM/urdf/QARM.urdf", fixed=True),
 )
 cube = scene.add_entity(
@@ -78,10 +79,10 @@ joint_names = [
     "SHOULDER",
     "ELBOW",
     "WRIST",
-    #'JOINT1A',
-    #'JOINT2A',
-    #'JOINT1B',
-    #'JOINT2B',
+    # "JOINT1A",
+    # "JOINT2A",
+    # "JOINT1B",
+    # "JOINT2B",
 ]
 
 dofs_idx = [qarm.get_joint(name).dofs_idx_local[0] for name in joint_names]

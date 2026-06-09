@@ -16,7 +16,7 @@ gs.init(
     precision="32",
     seed=None,
     debug=False,
-    performance_mode=True,  # to change when training (to gain 30% of performance)
+    performance_mode=False,  # to change when training (to gain 30% of performance)
     logging_level="warning",
     theme="light",
     logger_verbose_time=False,
@@ -32,7 +32,7 @@ scene = gs.Scene(
     vis_options=gs.options.VisOptions(
         show_world_frame=True,  # visualize the coordinate frame of `world` at its origin
         world_frame_size=1.0,  # length of the world frame in meter
-        show_link_frame=True,  # visualizing the coordinate frames of entity links
+        show_link_frame=False,  # visualizing the coordinate frames of entity links
         show_cameras=False,  # do not visualize mesh and frustum of the cameras added
         plane_reflection=False,  # turn off plane reflection
         ambient_light=(0.1, 0.1, 0.1),  # ambient light setting
@@ -45,11 +45,12 @@ scene = gs.Scene(
         max_FPS=60,
     ),
     renderer=gs.renderers.Rasterizer(),  # using rasterizer for camera rendering
-    show_viewer=False,
+    show_viewer=True,
 )
 # ------------------------------- add entities ------------------------------
 plane = scene.add_entity(gs.morphs.Plane())
 qarm_entity = scene.add_entity(
+    # genesis/QARM/urdf/qarm_with_gripper.urdf
     gs.morphs.URDF(file="genesis/QARM/urdf/QARM.urdf", fixed=True),
 )
 # ------------------------------- build scene ------------------------------
@@ -61,10 +62,10 @@ joint_names = [
     "SHOULDER",
     "ELBOW",
     "WRIST",
-    #'JOINT1A',
-    #'JOINT2A',
-    #'JOINT1B',
-    #'JOINT2B',
+    # "JOINT1A",
+    # "JOINT2A",
+    # "JOINT1B",
+    # "JOINT2B",
 ]
 
 dofs_idx = [qarm_entity.get_joint(name).dofs_idx_local[0] for name in joint_names]
@@ -85,7 +86,7 @@ qarm_controller = SimQArmController(
 
 qarm_controller.connect()
 
-#################################
+# ################################
 # Creating the missions sequence
 # 5 squares #######
 mission_square = SquareMission(
