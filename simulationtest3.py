@@ -74,6 +74,10 @@ joint_names = [
     'SHOULDER',
     'ELBOW',
     'WRIST',
+    #'JOINT1A',
+    #'JOINT2A',
+    #'JOINT1B',
+    #'JOINT2B',
 ]
 
 dofs_idx = [qarm.get_joint(name).dofs_idx_local[0] for name in joint_names]
@@ -153,7 +157,7 @@ def get_torques():
 def apply_torques(torques):
     qarm.control_dofs_force(torques, dofs_idx)
 
-for _ in range(3000):
+for _ in range(10*3000):
     #qarm.set_dofs_position(np.array([0., np.pi/8, np.pi/4, 0.]),dofs_idx)
     
     scene.step()
@@ -163,11 +167,16 @@ for _ in range(3000):
         print("Connexion établie avec le client.")
         break
 
+    #com_pos = qarm.get_links_pos(links_idx_local=[4], ref="link_com")
+  #
+    ## Draw a sphere at the COM position  
+    #scene.draw_debug_sphere(pos=com_pos, radius=0.01, color=(1, 0, 0, 1))
+
 scene.step()
 
 cube.set_pos(pos=(0.3 , 0, -0.3))
 
-for _ in range(1000):
+for _ in range(1000*10):
     torques_to_apply = get_torques()
     apply_torques(torques_to_apply)
 
