@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<robot name="test">
+
+    <link name="world" />
+
+    <joint name="world_base_joint" type="revolute">
+        <origin xyz="0 0 0.3" rpy="0 0 0"/>
+        <parent link="world" />
+        <child link="base_link" />
+        <axis xyz="1 0 0" />
+        <limit lower="-1.57" upper="1.57" effort="100.0" velocity="1.57" />
+        
+    </joint>
+
+    <link name="base_link">
+        <inertial>
+            <origin xyz="0 0 0.3" rpy="0 0 0" />
+            <mass value="1" />
+            <inertia ixx="1.556E-03" ixy="0.0" ixz="0.0" iyy="1.489E-03" iyz="0.0" izz="9.624E-04" />
+        </inertial>
+      <visual>
+        <origin xyz="0 0 0.3" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.6" radius="0.1"/>
+        </geometry>
+      </visual>
+    </link>
+</robot>
