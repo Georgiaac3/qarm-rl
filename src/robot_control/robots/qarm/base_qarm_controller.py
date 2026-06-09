@@ -54,6 +54,8 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         if display:
             self.display_data_queue = display_data_queue
 
+            self.last_phi_mes = np.zeros((4, 1))
+            self.last_dphi_mes = np.zeros((4, 1))
             self.last_X_mes = np.zeros((3, 1))
             self.last_X_des = np.zeros((3, 1))
             self.last_dX_mes = np.zeros((3, 1))
@@ -207,6 +209,8 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         ##############################################
         # Management of the variables for the display
         if self.display:
+            self.last_phi_mes = phi_mes
+            self.last_dphi_mes = dphi_mes
             self.last_X_des = X_des
             self.last_X_mes = X_mes
             self.last_dX_mes = dX_mes
@@ -261,6 +265,8 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
                     self.display_data_queue.put(
                         {
                             "t_s": t,
+                            "Angles Articulations mesurés (rad)": self.last_phi_mes.ravel().tolist(),
+                            "Vitesses mesurées (rad/s)": self.last_dphi_mes.ravel().tolist(),
                             "X_mes": X_mes,
                             "X_des": X_des,
                             "dX_mes": dX_mes,

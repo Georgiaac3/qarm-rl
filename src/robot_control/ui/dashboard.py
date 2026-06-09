@@ -8,7 +8,7 @@ import dearpygui.dearpygui as dpg
 import numpy as np
 
 from config import settings
-from src.robot_control.core.dynamics_hold import L1, L2, L3, L4, L5
+from robot_control.robots.qarm.qarm_data import QArmData
 
 
 class RealTimeApp:
@@ -45,11 +45,11 @@ class RealTimeApp:
         self.last_angles_measured = None
 
         # Longueurs du bras robot
-        self.L1 = L1
-        self.L2 = L2
-        self.L3 = L3
-        self.L4 = L4
-        self.L5 = L5
+        self.L1 = QArmData.L1
+        self.L2 = QArmData.L2
+        self.L3 = QArmData.L3
+        self.L4 = QArmData.L4
+        self.L5 = QArmData.L5
 
         # Bornes géométriques du robot pour fixer des limites de vue stables.
         self.arm_reach = self.L2 + self.L3 + self.L4 + self.L5

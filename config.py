@@ -10,16 +10,18 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Configuration de l'application de contrôle du bras robotique QARM."""
 
+    timestep: float = 0.005
+
     # ========================================================================
     # VARIABLES À AFFICHER
     # ========================================================================
     graphs_2d: Dict[str, List[str]] = {
-        # "Angles Articulations mesurés (rad)": [
-        #    "Joint_1_mes",
-        #    "Joint_2_mes",
-        #    "Joint_3_mes",
-        #    "Joint_4_mes",
-        # ],
+        "Angles Articulations mesurés (rad)": [
+            "Joint_1_mes",
+            "Joint_2_mes",
+            "Joint_3_mes",
+            "Joint_4_mes",
+        ],
         # "Vitesses mesurées (rad/s)": ["Speed_1_mes", "Speed_2_mes", "Speed_3_mes", "Speed_4_mes"],
         # "PWM envoyés": ["PWM_1_cmd", "PWM_2_cmd", "PWM_3_cmd", "PWM_4_cmd", "Grip_cmd"],
         "x": ["x_des", "x_mes"],

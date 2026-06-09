@@ -47,6 +47,9 @@ warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
 no_strict_optional = true
+plugins = [
+    "jaxtyping.mypy_plugin"
+]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
