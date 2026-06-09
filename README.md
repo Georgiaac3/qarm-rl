@@ -1,167 +1,108 @@
 # QARM-RL
 
-Système de contrôle du bras robotique QARM via communication UDP avec Simulink. Implémente une séquence de lancer d'objet avec contrôle proportionnel des vitesses articulaires.
+Contrôle du bras robotique QARM avec une interface temps réel et plusieurs routines de démonstration.
 
-pip install -e .
+## Vue d’ensemble
 
-## Structure du Projet
+Le projet est organisé autour de deux parties :
 
-```
-TODO
+- le **lancement** (`main.py`), qui démarre une routine et l’interface de visualisation ;
+- le **package source** (`src/robot_control/`), qui regroupe le contrôle, les missions, les robots, l’UI et les utilitaires.
+
+## Structure du projet
+
+```text
 qarm-rl/
-├── main.py                          # Point d'entrée principal
-├── BasicIO_pwm_mode_retest.slx      # Modèle Simulink du QARM
-├── requirements.txt                 # Dépendances Python
-├── README.md                        # Documentation
-│
-├── core/                            # Modules centraux
-│   ├── config.py                    # Configuration centralisée (Settings)
-│   └── logger.py                    # Configuration du logging
-│
-└── utils/                           # Modules utilitaires
-    ├── brain.py                     # Logique de contrôle (à venir)
-    ├── camera.py                    # Traitement d'images (à venir)
-    └── udp.py                       # Communication UDP avec Simulink
+├── main.py
+├── BasicIO_pwm_mode_retest.slx
+├── config.py
+├── pyproject.toml
+├── requirements.txt
+├── README.md
+├── routines/
+│   ├── base_routine.py
+│   ├── engine.py
+│   ├── routine1.py
+│   └── routine2.py
+├── rl_envs/
+│   └── qarm_pid_gym_env.py
+├── src/
+│   └── robot_control/
+│       ├── core/
+│       ├── missions/
+│       ├── robots/
+│       ├── ui/
+│       └── utils/
+└── tests/
+    ├── test_types.py
+    └── custom_tests/
 ```
+
+## Rôle des dossiers
+
+- `main.py` : point d’entrée CLI, lance une routine avec `--routine`.
+- `routines/` : séquences d’exécution de haut niveau pour le robot.
+- `src/robot_control/core/` : logique de base du contrôle, cinématique et dynamique.
+- `src/robot_control/missions/` : missions et trajectoires.
+- `src/robot_control/robots/` : contrôleurs QARM réel/simulé.
+- `src/robot_control/ui/` : dashboard Dear PyGui.
+- `src/robot_control/utils/` : types, calculs, trajectoires et logs.
+- `rl_envs/` : environnements de simulation / RL.
 
 ## Installation
 
 ### Prérequis
 
-- Python 3.8 ou supérieur (idéalement 3.12, plus haut ça risque de faire bigger pyrealsense)
-- MATLAB/Simulink (pour le modèle du robot)
+- Python 3.8+
+- MATLAB/Simulink si vous utilisez le modèle `.slx`
 
-### Étapes d'installation
+### Installation du projet
 
-1. **Cloner le dépôt**
-   ```bash
-   git clone <url-du-repo>
-   cd qarm-rl
-   ```
+```bash
+pip install -e .
+```
 
-2. **Créer un environnement virtuel** (recommandé)
-   ```bash
-   python -m venv qarmrl
-   source qarmrl/bin/activate  # Sur macOS/Linux
-   # ou
-   qarmrl\Scripts\activate     # Sur Windows
-   ```
-   ou avec conda
-   ```bash
-   conda create -n qarmrl python
-   conda activate qarmrl
-   ```
-
-3. **Installer les dépendances**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configurer Pre-commit** (recommandé)
-   ```bash
-   pre-commit install
-   ```
-
-   Les hooks pre-commit s'exécuteront automatiquement avant chaque commit pour :
-   - Formater le code avec Black
-   - Trier les imports avec isort
-   - Vérifier la qualité du code avec Flake8
-   - Valider les types avec mypy
-   - Nettoyer les fichiers (espaces, fins de ligne, etc.)
-
-   Pour exécuter manuellement sur tous les fichiers :
-   ```bash
-   pre-commit run --all-files
-   ```
-
-## Configuration
-
-Toutes les configurations se trouvent dans [`core/config.py`](core/config.py).
+Si besoin, installez aussi les dépendances listées dans `requirements.txt`.
 
 ## Utilisation
 
-### Démarrage du Contrôleur
+### Lancer une routine
 
-1. **Ouvrir et lancer le modèle Simulink**
-   - Ouvrir `BasicIO_pwm_mode_retest.slx` dans MATLAB
-   - Lancer la simulation
+La routine par défaut est la 1.
 
-2. **Exécuter le script Python**
-   ```bash
-   python main.py
-   ```
-
-3. **Arrêter le contrôleur**
-   - Appuyer sur `Ctrl+C` pour un arrêt propre
-
-
-## Convention des Axes
-
-Point de vue du robot :
-- **Base** : `+` = rotation vers la gauche
-- **Épaule** : `+` = mouvement vers le bas/avant
-- **Coude** : `+` = mouvement vers l'avant
-- **Poignet** : `+` = rotation sens horaire
-- **Pince** : `1` = fermée, `0` = ouverte
-
-## Debugging
-
-Pour activer les logs de debug détaillés, modifiez dans [`core/logger.py`](core/logger.py) :
-```python
-logging.basicConfig(
-    level=logging.DEBUG,  # Changez INFO en DEBUG
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+```bash
+python main.py
 ```
+
+Pour choisir explicitement la routine :
+
+```bash
+python main.py --routine 1
+python main.py --routine 2
+```
+
+### Avec Simulink
+
+1. Ouvrir `BasicIO_pwm_mode_retest.slx` dans MATLAB.
+2. Lancer la simulation.
+3. Lancer ensuite le script Python.
+
+## Configuration
+
+La configuration globale est centralisée dans `config.py` à la racine et dans les modules de `src/robot_control/`.
 
 ## Développement
 
-### Pre-commit Hooks
-
-Le projet utilise pre-commit pour maintenir la qualité du code. Les hooks configurés :
-
-- **trailing-whitespace** : Supprime les espaces en fin de ligne
-- **end-of-file-fixer** : Assure une ligne vide en fin de fichier
-- **black** : Formatage automatique du code Python (ligne max: 100 caractères)
-- **isort** : Tri automatique des imports
-- **flake8** : Vérification de la qualité du code (PEP8)
-- **mypy** : Vérification des types statiques
-
-### Commandes utiles
+Commandes utiles :
 
 ```bash
-# Installer les hooks (à faire une fois)
 pre-commit install
-
-# Exécuter sur tous les fichiers
 pre-commit run --all-files
-
-# Exécuter sur les fichiers modifiés
-pre-commit run
-
-# Mettre à jour les hooks vers les dernières versions
-pre-commit autoupdate
-
-# Formater un fichier spécifique avec Black
-black main.py
-
-# Vérifier les types avec mypy
-mypy main.py core/ utils/
+black main.py src/ routines/
+pytest
 ```
 
-### Structure de code recommandée
+## Notes
 
-- Utiliser les type hints pour toutes les fonctions
-- Documenter avec des docstrings (format Google/NumPy)
-- Limiter les lignes à 100 caractères
-- Suivre PEP8 pour le style de code
-
-
-### Kill un process python
-
-Window
-````
-tasklist | findstr python
-taskkill /PID 32436 /F
-````
-Avec 32436 à remplacer avec le process ID correspondant.
+- L’interface graphique est dans `src/robot_control/ui/dashboard.py`.
+- Les routines disponibles sont actuellement `routine1` et `routine2`.
