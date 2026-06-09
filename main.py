@@ -2,24 +2,50 @@
 Point d'entrée du programme. Lance le processus de contrôle du robot et l'interface de visualisation en temps réel.
 """
 
+import argparse
 import multiprocessing as mp
 
-from core.engine import run_robot
-from ui.dashboard import RealTimeApp
+from routines.routine1 import Routine1
+from routines.routine2 import Routine2
+from src.robot_control.ui.dashboard import RealTimeApp
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Lance une routine du robot QARM.")
+    parser.add_argument(
+        "--routine",
+        type=int,
+        default=1,
+        choices=(1, 2),
+        help="Numéro de la routine à lancer (1 ou 2).",
+    )
+    return parser.parse_args()
+
+
+def build_routine(routine_id, data_queue, stop_event):
+    if routine_id == 1:
+        return Routine1(display_data_queue=data_queue, stop_event=stop_event)
+    if routine_id == 2:
+        return Routine2(display_data_queue=data_queue, stop_event=stop_event)
+    raise ValueError(f"Routine inconnue: {routine_id}")
+
 
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
+    args = parse_args()
 
     data_queue = mp.Queue(maxsize=100)
     stop_event = mp.Event()
 
-    process_run_robot = mp.Process(target=run_robot, args=(data_queue, stop_event))
-    process_run_robot.start()
+    routine = build_routine(args.routine, data_queue, stop_event)
+
+    routine_process = mp.Process(target=routine.run)
+    routine_process.start()
 
     try:
         app = RealTimeApp(data_queue)
         app.run()
     finally:
         stop_event.set()
-        process_run_robot.join()
+        routine_process.join()
         print("Programme arrêté proprement.")
