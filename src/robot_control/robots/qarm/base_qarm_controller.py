@@ -177,6 +177,17 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         # The fact that the 2nd joitn have two motors should also be taken into account (1/2 in tau_cmd), however it doesn't seem to work
         Vcmd = (self.R / self.ktGR) * (inertie * GR + frottements * GR + tau_cmd) + backFEM
 
+        # TODO : Take into account tau_s for the deadand (motors don't work under 0.2 V...)
+        # doesn't seems very helpful
+        # tau_s = 0.2
+        # relevant = tau_s/10
+
+        # Vcmd = np.where(
+        #    (np.abs(Vcmd) < tau_s) & (np.abs(Vcmd) > relevant),
+        #    np.sign(Vcmd) * tau_s,
+        #    Vcmd
+        # )
+
         Vcmd[3, 0] = (
             0.0  # No command on the gripper for now, TODO : manage the gripper command in the missions and here
         )
