@@ -7,7 +7,7 @@ import pytest
 # Add the parent directory to the path so we can import from qarm_rl
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from utils.types import Waypoint
+from src.robot_control.utils.types import Waypoint
 
 
 # --- FIXTURES ---

@@ -1,0 +1,35 @@
+"""
+Ce module contient la classe de configuration de l'application, qui utilise Pydantic pour définir les paramètres de configuration et les valeurs par défaut. Il inclut également une énumération pour sélectionner le mode de fonctionnement du bras robotique (réel ou simulation).
+"""
+
+from typing import Dict, List
+
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    """Configuration de l'application de contrôle du bras robotique QARM."""
+
+    # ========================================================================
+    # VARIABLES À AFFICHER
+    # ========================================================================
+    graphs_2d: Dict[str, List[str]] = {
+        # "Angles Articulations mesurés (rad)": [
+        #    "Joint_1_mes",
+        #    "Joint_2_mes",
+        #    "Joint_3_mes",
+        #    "Joint_4_mes",
+        # ],
+        # "Vitesses mesurées (rad/s)": ["Speed_1_mes", "Speed_2_mes", "Speed_3_mes", "Speed_4_mes"],
+        # "PWM envoyés": ["PWM_1_cmd", "PWM_2_cmd", "PWM_3_cmd", "PWM_4_cmd", "Grip_cmd"],
+        "x": ["x_des", "x_mes"],
+        "y": ["y_des", "y_mes"],
+        "z": ["z_des", "z_mes"],
+        "dx": ["dx_des", "dx_mes"],
+        "dy": ["dy_des", "dy_mes"],
+        "dz": ["dz_des", "dz_mes"],
+    }
+    graphs_3d: List[str] = ["TCP_Trajectoire", "Wanted_TCP_Trajectoire"]
+
+
+settings = Settings()
