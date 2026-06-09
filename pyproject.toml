@@ -6,7 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "robot_control"
 version = "0.1.0"
 description = "A control package for the QArm and other robot arms that is easy to use for rl."
-dependencies = [] # Add external dependencies like numpy here if needed
+dependencies = [
+  "pydantic-settings>=2.0.0",
+  "numpy>=2.4.0",
+  "dearpygui>=2.2",
+  "jaxtyping>=0.3.10",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -61,3 +66,14 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --cov=. --cov-report=term-missing"
+
+[project.optional-dependencies]
+dev = [
+  "pre-commit>=3.5.0",
+  "black>=24.0.0",
+  "isort>=5.13.0",
+  "flake8>=7.0.0",
+  "mypy>=1.8.0",
+  "pytest>=9.0.2",
+  "pytest-cov>=7.1.0",
+]

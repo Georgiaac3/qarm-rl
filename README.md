@@ -54,12 +54,17 @@ qarm-rl/
 ### Prérequis
 
 - Python 3.8+
+- Pour `genesis-world` : Python < 3.14
 - MATLAB/Simulink si vous utilisez le modèle `.slx`
 
 ### Installation du projet
 
 ```bash
 pip install -e .
+```
+
+```bash
+pip install -r rl_envs/requirements.txt
 ```
 
 Si besoin, installez aussi les dépendances listées dans `requirements.txt`.

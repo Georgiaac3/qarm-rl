@@ -58,3 +58,7 @@ BasicIO_pwm_mode_retest_quarc_win64/
 BasicIO_pwm_mode_retest.slx.autosave
 
 *.zip
+
+# Generated outputs
+plot_data/*.csv
+video*.mp4
