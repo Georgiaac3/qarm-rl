@@ -75,7 +75,7 @@ def run_robot(data_queue=None, stop_event=None):
     )
 
     #robot.missions.append(mission_circle)
-    # mission_square.set_ini_waypoint(mission_circle.waypoints[-1])  # Chaînage des missions pour une transition fluide
+    #mission_square.set_ini_waypoint(mission_circle.waypoints[-1])  # Chaînage des missions pour une transition fluide
     mission_square.compute_trajectory()  # Calcul de la trajectoire pour la mission carré après avoir défini le waypoint initial
     #robot.missions.append(mission_square)
 
@@ -99,7 +99,7 @@ def run_robot(data_queue=None, stop_event=None):
     # Mission 2 [Début du lancé]: Se déplacer à une position donnée
     waypoint_lance = Waypoint(
         position=np.array([0.15, 0, 0.70]).reshape(3, 1),
-        velocity=np.array([-0.55, 0.0, 0.45]).reshape(3, 1),
+        velocity=np.array([-1.8, 0.0, 0.7]).reshape(3, 1),
         acceleration=None,
     )
     mission_lance = MultiTrajectoryMission(waypoint_lance)
