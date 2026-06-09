@@ -50,8 +50,8 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
 
         ############################
         # Display setup
+        self.display = display
         if display:
-            self.display = display
             self.display_data_queue = display_data_queue
 
             self.last_X_mes = np.zeros((3, 1))
@@ -113,6 +113,10 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         ###################
         # Logique missions
         current_mission = self.update_and_get_mission(t, X_mes, dX_mes)
+        if current_mission.start_time is None:
+            raise ValueError(
+                f"Start time of the mission {current_mission} is None, but it should have been initialized in update_and_get_mission()."
+            )
 
         ########################
         # Computing the command
@@ -163,6 +167,13 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         # !! The GR (Gear Ratio) come from the fact that the equation here take into account the motor shaft
         Vcmd = (self.R / self.ktGR) * tau_cmd + self.kvGR * dq_mes
 
+        Vcmd[3, 0] = (
+            0.0  # No command on the gripper for now, TODO : manage the gripper command in the missions and here
+        )
+        tau_cmd[3, 0] = (
+            0.0  # No command on the gripper for now, TODO : manage the gripper command in the missions and here
+        )
+
         # Normalization of the voltage signal between -1 and 1
         pwm = np.clip(Vcmd / self.Valim, -1, 1)
 
@@ -182,9 +193,12 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
 
         ###############################################
         # Return the raw command to be sent to the robot
+        gripper_command = np.array(
+            [[0.0]]
+        )  # TODO : manage the gripper command in the missions and here
         if self.command_type == CommandEnum.TORQUES:
-            return tau_cmd.append(0)  # This is for the gripper
-        return pwm.append(0)
+            return np.vstack((tau_cmd, gripper_command))
+        return np.vstack((pwm, gripper_command))
 
     def go(self):
         """Boucle de contrôle principale du robot. Lit les données des capteurs, met à jour les missions en cours et envoie les commandes au robot à une fréquence définie."""
@@ -202,14 +216,14 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
                 self._send_command(cmd)
 
             if self.display:
-                self._display_variables()
+                self._display_variables(time.perf_counter() - start_time)
 
             while time.perf_counter() < next_tick:
                 pass  # Seems to be the best way to have a precise timestep, sleeping is not precise enough
 
             next_tick += self.timestep
 
-    def _display_variables(self):
+    def _display_variables(self, t):
         """Affiche les variables de contrôle dans la console et les envoie à une interface graphique via une queue."""
         if self.display_data_queue is not None:
             if (
@@ -218,13 +232,26 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
                 and self.last_dX_mes is not None
                 and self.last_dX_des is not None
             ):
+                X_mes = self.last_X_mes.ravel().tolist()
+                X_des = self.last_X_des.ravel().tolist()
+                dX_mes = self.last_dX_mes.ravel().tolist()
+                dX_des = self.last_dX_des.ravel().tolist()
                 try:
                     self.display_data_queue.put(
                         {
-                            "X_mes": self.last_X_mes.ravel().tolist(),
-                            "X_des": self.last_X_des.ravel().tolist(),
-                            "dX_mes": self.last_dX_mes.ravel().tolist(),
-                            "dX_des": self.last_dX_des.ravel().tolist(),
+                            "t_s": t,
+                            "X_mes": X_mes,
+                            "X_des": X_des,
+                            "dX_mes": dX_mes,
+                            "dX_des": dX_des,
+                            "x": [X_des[0], X_mes[0]],
+                            "y": [X_des[1], X_mes[1]],
+                            "z": [X_des[2], X_mes[2]],
+                            "dx": [dX_des[0], dX_mes[0]],
+                            "dy": [dX_des[1], dX_mes[1]],
+                            "dz": [dX_des[2], dX_mes[2]],
+                            "TCP_Trajectoire": self.last_X_mes.ravel().tolist(),
+                            "Wanted_TCP_Trajectoire": self.last_X_des.ravel().tolist(),
                         },
                         block=False,
                     )

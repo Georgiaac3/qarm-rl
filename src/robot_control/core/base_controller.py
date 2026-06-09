@@ -2,7 +2,6 @@
 Contrôleur commun pour simulation ou robot réel.
 """
 
-import time
 from abc import ABC, abstractmethod
 from collections import deque
 
@@ -10,12 +9,13 @@ from collections import deque
 from typing import Optional
 
 import numpy as np
-from numpy.typing import NDArray
+
+from robot_control.missions import Mission, StationaryMission
+from robot_control.utils import Vector3x1, Waypoint, robot_says, robot_says_phase
 
 # Custom imports
-from robot_control import Dynamics, Kinematics
-from robot_control.missions import StationaryMission
-from robot_control.utils import Waypoint, robot_says, robot_says_phase
+from .base_dynamics import Dynamics
+from .base_kinematics import Kinematics
 
 
 def connect_decorator(func):
@@ -90,7 +90,7 @@ class Controller(Dynamics, Kinematics, ABC):
         See robots/qarm/base_qarm_controller.py for an example of implementation of this method.
         """
 
-    def update_and_get_mission(self, t, X_mes, dX_mes):
+    def update_and_get_mission(self, t: float, X_mes: Vector3x1, dX_mes: Vector3x1) -> Mission:
         """
         Perfoms the logic of updating the missions queue and returns the current mission to execute.
         Work with cartesian coordinates as a state for know.

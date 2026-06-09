@@ -52,12 +52,11 @@ class Dynamics(ABC):
         """
 
     @abstractmethod
-    def coriolis_velocity_signals(self, dq: Vector4x1, mL: float = 0) -> Vector6x1:
+    def coriolis_velocity_signals(self, dq: Vector4x1) -> Vector6x1:
         """
         Computes the Coriolis signals [dq_i, dq_j] for all pairs of joints i, j.
         Usage : B @ B_signals
         dq: joint velocities for dynamic calculations
-        mL: mass of the load at the end-effector, if applicable (default is 0 for no load)
         Returns:
             B_signals(dq): Coriolis signals
         """

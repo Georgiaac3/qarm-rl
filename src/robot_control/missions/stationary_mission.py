@@ -4,8 +4,9 @@ Module contenant la classe StationaryMission, qui représente une mission où le
 
 import numpy as np
 
-from src.robot_control.missions.base_mission import Mission
-from src.robot_control.utils.types import Waypoint
+from robot_control.utils import Waypoint
+
+from .base_mission import Mission
 
 
 class StationaryMission(Mission):
@@ -29,7 +30,7 @@ class StationaryMission(Mission):
             return True
         return False
 
-    def set_ini_waypoint(self, waypoint):
+    def set_ini_waypoint(self, waypoint: Waypoint):
         """Permet de définir le waypoint initial de la mission, nécessaire pour toutes les missions."""
         # self.check_waypoint_validity(waypoint)
         # self.ini_waypoint = waypoint
@@ -47,7 +48,7 @@ class StationaryMission(Mission):
             raise ValueError("Waypoint initial non défini pour la mission de stationnarité.")
         return self.ini_waypoint
 
-    def check_waypoint_validity(self, waypoint):
+    def check_waypoint_validity(self, waypoint: Waypoint):
         """Vérifie que le waypoint est valide pour une mission de stationnarité (vitesses et accélérations nulles)."""
         if waypoint is None:
             raise ValueError("Waypoint ne peut pas être None pour une mission de stationnarité.")

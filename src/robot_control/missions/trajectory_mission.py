@@ -4,9 +4,9 @@ Module de mission de suivi de trajectoire multi-segment.
 
 from typing import List, Optional, Union
 
-from src.robot_control.missions.base_mission import Mission
-from src.robot_control.utils.trajectory import get_desired_state, get_quintic_coeffs_and_time
-from src.robot_control.utils.types import Waypoint
+from robot_control.utils import Waypoint, get_desired_state, get_quintic_coeffs_and_time
+
+from .base_mission import Mission
 
 
 class MultiTrajectoryMission(Mission):
@@ -34,18 +34,18 @@ class MultiTrajectoryMission(Mission):
         )  # Liste des segments de la trajectoire avec leurs coefficients et durées
         self.total_duration = 0.0
 
-    def finish_condition(self, t, waypoint_mes):
+    def finish_condition(self, t: float, waypoint_mes: Waypoint):
         """
         La mission se termine lorsque le temps t dépasse la durée totale de la trajectoire.
         Note: on pourrait aussi ajouter une condition de proximité à la position finale pour plus de robustesse, mais cela peut être délicat à régler en pratique.
         """
         return t >= self.total_duration
 
-    def set_ini_waypoint(self, waypoint):
+    def set_ini_waypoint(self, waypoint: Waypoint):
         """Permet de définir le waypoint initial de la mission, nécessaire pour toutes les missions."""
         self.ini_waypoint = waypoint
 
-    def get_waypoint_at_t(self, t):
+    def get_waypoint_at_t(self, t: float):
         """
         Retourne la position, vitesse, et accélération désirées à l'instant t.
         """

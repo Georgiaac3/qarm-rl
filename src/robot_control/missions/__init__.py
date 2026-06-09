@@ -1,5 +1,6 @@
 """Mission definitions."""
 
+from .base_mission import Mission
 from .circle_mission import CircleMission
 from .square_mission import SquareMission
 from .stationary_mission import StationaryMission

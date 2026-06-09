@@ -13,15 +13,15 @@ if __name__ == "__main__":
     data_queue = mp.Queue(maxsize=100)
     stop_event = mp.Event()
 
-    routine = Routine1()
+    routine = Routine1(display_data_queue=data_queue, stop_event=stop_event)
 
-    process_run_robot = mp.Process(target=routine.run(), args=(data_queue, stop_event))
-    process_run_robot.start()
+    routine_process = mp.Process(target=routine.run)
+    routine_process.start()
 
     try:
         app = RealTimeApp(data_queue)
         app.run()
     finally:
         stop_event.set()
-        process_run_robot.join()
+        routine_process.join()
         print("Programme arrêté proprement.")

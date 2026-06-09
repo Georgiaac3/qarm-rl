@@ -28,7 +28,7 @@ class QArmDynamics(Dynamics, QArmData, QArmConvertor):
         ddq = ddphi
         return q, dq, ddq
 
-    def get_inertia_matrix(self, q, mL=0):
+    def inertia_matrix(self, q, mL=0):
         if q.shape != (4, 1):
             raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
 
@@ -228,7 +228,7 @@ class QArmDynamics(Dynamics, QArmData, QArmConvertor):
         C = np.array([[0, 0, 0, 0], [C21, 0, C23, 0], [C31, C32, 0, 0], [0, 0, 0, 0]])
         return C
 
-    def get_gravity_vector(self, q, mL=0):
+    def gravity_vector(self, q, mL=0):
         if q.shape != (4, 1):
             raise ValueError("Les angles d'entrée doivent être des np arrays de taille (4, 1).")
 

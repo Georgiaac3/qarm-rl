@@ -52,14 +52,20 @@ class Settings(BaseSettings):
     # VARIABLES À AFFICHER
     # ========================================================================
     graphs_2d: Dict[str, List[str]] = {
-        "Angles Articulations mesurés (rad)": [
-            "Joint_1_mes",
-            "Joint_2_mes",
-            "Joint_3_mes",
-            "Joint_4_mes",
-        ],
+        # "Angles Articulations mesurés (rad)": [
+        #    "Joint_1_mes",
+        #    "Joint_2_mes",
+        #    "Joint_3_mes",
+        #    "Joint_4_mes",
+        # ],
         # "Vitesses mesurées (rad/s)": ["Speed_1_mes", "Speed_2_mes", "Speed_3_mes", "Speed_4_mes"],
-        "PWM envoyés": ["PWM_1_cmd", "PWM_2_cmd", "PWM_3_cmd", "PWM_4_cmd", "Grip_cmd"],
+        # "PWM envoyés": ["PWM_1_cmd", "PWM_2_cmd", "PWM_3_cmd", "PWM_4_cmd", "Grip_cmd"],
+        "x": ["x_des", "x_mes"],
+        "y": ["y_des", "y_mes"],
+        "z": ["z_des", "z_mes"],
+        "dx": ["dx_des", "dx_mes"],
+        "dy": ["dy_des", "dy_mes"],
+        "dz": ["dz_des", "dz_mes"],
     }
     graphs_3d: List[str] = ["TCP_Trajectoire", "Wanted_TCP_Trajectoire"]
 

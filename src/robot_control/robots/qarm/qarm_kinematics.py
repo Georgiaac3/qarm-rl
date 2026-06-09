@@ -4,7 +4,8 @@ QArm Kinematics module.
 
 import numpy as np
 
-from robot_control import Kinematics, utils
+from robot_control import Kinematics
+from robot_control.utils import get_trig_values4
 
 from .qarm_convertor import QArmConvertor
 from .qarm_data import QArmData
@@ -15,7 +16,7 @@ class QArmKinematics(Kinematics, QArmData, QArmConvertor):
         super().__init__()
         # TODO : should take an urdf in the futur to derive everything (in the base class Kinematics)
 
-    def get_jacobian(self, q):
+    def jacobian(self, q):
         """
         Calcule le jacobien (J) de la cinématique directe du robot.
         - q : vecteur colonne des angles articulaires de la dynamique géométrique (4,1)
@@ -26,7 +27,7 @@ class QArmKinematics(Kinematics, QArmData, QArmConvertor):
         if q.shape != (4, 1):
             raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
 
-        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*utils.get_trig_values4(q))
+        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*get_trig_values4(q))
 
         J = np.array(
             [
@@ -48,7 +49,7 @@ class QArmKinematics(Kinematics, QArmData, QArmConvertor):
 
         return J
 
-    def get_djacobian(self, q, dq):
+    def djacobian(self, q, dq):
         """
         Calcule la dérivée du jacobien (dJ) de la cinématique directe du robot.
         - q : vecteur colonne des angles articulaires de la dynamique géométrique (4,1)
@@ -64,7 +65,7 @@ class QArmKinematics(Kinematics, QArmData, QArmConvertor):
         dq2 = dq[1, 0]
         dq3 = dq[2, 0]
 
-        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*utils.get_trig_values4(q))
+        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*get_trig_values4(q))
 
         dJ = np.array(
             [
@@ -113,7 +114,7 @@ class QArmKinematics(Kinematics, QArmData, QArmConvertor):
         if q.shape != (4, 1):
             raise ValueError("q doit être un vecteur colonne de dimension (4, 1)")
 
-        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*utils.get_trig_values4(q))
+        c1, s1, c2, s2, c3, s3, c23, s23 = self.convert_trig_values(*get_trig_values4(q))
 
         x = c1 * (self.l2 * c2 - self.l3 * s23)
         y = s1 * (self.l2 * c2 - self.l3 * s23)

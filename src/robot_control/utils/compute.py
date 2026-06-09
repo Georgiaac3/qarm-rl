@@ -16,4 +16,4 @@ def get_trig_values4(q):
     c23 = np.cos(q[1, 0] + q[2, 0])
     s23 = np.sin(q[1, 0] + q[2, 0])
 
-    return convert_trig_values(c1, s1, c2, s2, c3, s3, c23, s23)
+    return (c1, s1, c2, s2, c3, s3, c23, s23)

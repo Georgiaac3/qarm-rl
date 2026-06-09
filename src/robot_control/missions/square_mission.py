@@ -1,7 +1,8 @@
 import numpy as np
 
-from src.robot_control.missions.trajectory_mission import MultiTrajectoryMission
-from src.robot_control.utils.types import Waypoint
+from robot_control.utils import Waypoint
+
+from .trajectory_mission import MultiTrajectoryMission
 
 
 class SquareMission(MultiTrajectoryMission):

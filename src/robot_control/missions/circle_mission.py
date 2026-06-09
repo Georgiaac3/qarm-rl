@@ -1,9 +1,9 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from config import settings
-from src.robot_control.missions.base_mission import Mission
-from src.robot_control.utils.types import Waypoint
+from robot_control.utils import Waypoint
+
+from .base_mission import Mission
 
 
 class CircleMission(Mission):
@@ -16,6 +16,7 @@ class CircleMission(Mission):
         plane: NDArray[np.float64],
         nb_of_circles: int,
         time_per_circle: float,
+        timestep: float,
     ):
         """
         center: centre du cercle (3D)
@@ -25,6 +26,7 @@ class CircleMission(Mission):
         time_per_circle: temps en secondes pour parcourir un cercle complet
         """
         super().__init__()
+        self.timestep = timestep
         self.center = center.reshape(3, 1)
         self.radius = radius
         self.plane = plane.reshape(3, 1)
@@ -58,7 +60,7 @@ class CircleMission(Mission):
         # Calcul des waypoints
         waypoints = []
         for _ in range(self.nb_of_circles):
-            num_points = int(self.time_per_circle / settings.timestep)
+            num_points = int(self.time_per_circle / self.timestep)
             for t in np.linspace(0, self.time_per_circle, num=num_points):
                 angle = (2 * np.pi * t) / self.time_per_circle
                 vector_on_circle = self.radius * (
@@ -86,4 +88,4 @@ class CircleMission(Mission):
 
     def get_waypoint_at_t(self, t):
         """Retourne le waypoint désiré à l'instant t."""
-        return self.waypoints[int(t / settings.timestep) % len(self.waypoints)]
+        return self.waypoints[int(t / self.timestep) % len(self.waypoints)]

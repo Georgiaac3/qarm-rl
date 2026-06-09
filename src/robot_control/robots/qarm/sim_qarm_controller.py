@@ -1,9 +1,9 @@
-from genesis.engine.entities import RigidEntity
+# from genesis.engine.entities import RigidEntity
 
 from .base_qarm_controller import BaseQArmController
 
 
-class QArmSim(BaseQArmController, RigidEntity):
+class SimQArmController(BaseQArmController):  # , RigidEntity):
     def __init__(self):
         pass
 

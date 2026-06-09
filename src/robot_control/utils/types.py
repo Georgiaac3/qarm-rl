@@ -18,6 +18,7 @@ Matrix3x3 = Float[np.ndarray, "3 3"]  # 3x3 matrix
 Matrix3x4 = Float[np.ndarray, "3 4"]  # 3x4 matrix
 Matrix4x4 = Float[np.ndarray, "4 4"]  # 4x4 matrix
 Matrix4x6 = Float[np.ndarray, "4 6"]  # 4x6 matrix
+Matrix6x3 = Float[np.ndarray, "6 3"]  # 6x3 matrix
 
 
 @dataclass

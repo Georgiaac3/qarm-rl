@@ -8,13 +8,13 @@ import numpy as np
 from numpy.typing import NDArray
 
 # from core.dynamics import Lbras, beta, dq_max, l1, l2, l3
-from src.robot_control.utils.types import Waypoint
+from .types import Matrix6x3, Waypoint
 
 
 def get_quintic_coeffs_and_time(
     waypoint_start: Waypoint,
     waypoint_end: Waypoint,
-) -> Tuple[NDArray[np.float64], float]:
+) -> Tuple[Matrix6x3, float]:
     """
     Calcule les coefficients du polynôme de degré 5 pour x, y, z.
     Ils sont solution du système linéaire :

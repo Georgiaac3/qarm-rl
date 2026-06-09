@@ -362,7 +362,7 @@ class RealTimeApp:
                             self.x_axes_2d[group_name] = x_axis
                             for var in signals:
                                 dpg.add_line_series(
-                                    self.x_data,
+                                    list(self.x_data),
                                     list(self.y_data[var]),
                                     label=var,
                                     tag=f"series_{var}",
