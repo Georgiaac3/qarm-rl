@@ -226,7 +226,9 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         return np.vstack((pwm, gripper_command))
 
     def go(self):
-        """Boucle de contrôle principale du robot. Lit les données des capteurs, met à jour les missions en cours et envoie les commandes au robot à une fréquence définie."""
+        """
+        Boucle de contrôle principale du robot. Lit les données des capteurs, met à jour les missions en cours et envoie les commandes au robot à une fréquence définie.
+        """
 
         start_time = time.perf_counter()
         next_tick = start_time + self.timestep
