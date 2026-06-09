@@ -79,8 +79,8 @@ class QArmData:
     ktGR = np.array(
         [
             0.5 * C_ktGR,
-            0.8 * C_ktGR,
-            C_ktGR / 3,
+            0.5 * C_ktGR,
+            0.2 * C_ktGR,
             100000000000,  # 0.005 * 353.5,
         ]
     ).reshape(

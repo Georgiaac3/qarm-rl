@@ -163,9 +163,19 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         tau_cmd += G
         tau_cmd += friction
 
+        GR = 0.0  # TODO : 272.5 # Attention ce n'est pas le même GR pour le joint 4
+        Jmotor = np.array([[0.28, 0.28 * 2, 0.28 / 2, 0]]).T
+        tau_k = 0.05
+        mu_v = 0.5
+
+        inertie = Jmotor * GR * ddq_cmd
+        frottements = mu_v * GR * dq_mes + tau_k * np.sign(dq_mes)
+        backFEM = self.kvGR * dq_mes
+
         # Conversion of torque into a voltage signal (V) to be sent to the motor
         # !! The GR (Gear Ratio) come from the fact that the equation here take into account the motor shaft
-        Vcmd = (self.R / self.ktGR) * tau_cmd + self.kvGR * dq_mes
+        # The fact that the 2nd joitn have two motors should also be taken into account (1/2 in tau_cmd), however it doesn't seem to work
+        Vcmd = (self.R / self.ktGR) * (inertie * GR + frottements * GR + tau_cmd) + backFEM
 
         Vcmd[3, 0] = (
             0.0  # No command on the gripper for now, TODO : manage the gripper command in the missions and here
