@@ -27,6 +27,8 @@ qarmrl
 # Jupyter Notebook
 .ipynb_checkpoints
 
+checkpoints/
+
 # Logs
 *.log
 

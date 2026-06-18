@@ -1,0 +1,21 @@
+# RL with Variable Objects - Bin Picking Task
+
+# Core dependencies
+torch>=2.0.0
+torchvision>=0.15.0
+numpy>=1.23.0
+opencv-python>=4.6.0
+
+# Gymnasium and RL
+gymnasium>=0.28.0
+stable-baselines3>=2.0.0
+
+# Training utilities
+tqdm>=4.65.0
+rich>=14.0.0
+matplotlib>=3.5.0
+
+# Development
+pytest>=7.2.0
+black>=23.0.0
+isort>=5.12.0
