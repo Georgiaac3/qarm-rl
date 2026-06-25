@@ -3,9 +3,8 @@
 
 # Core ML / RL
 torch>=2.12.0
-stable-baselines3
-gymnasium>=1.2.3
 tensorboard>=2.20.0
+rsl-rl-lib>=5.4.1
 
 # Genesis environment
 genesis-world>=1.1.0

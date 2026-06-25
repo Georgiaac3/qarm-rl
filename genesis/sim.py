@@ -45,13 +45,13 @@ scene = gs.Scene(
         max_FPS=60,
     ),
     renderer=gs.renderers.Rasterizer(),  # using rasterizer for camera rendering
-    show_viewer=True,
+    show_viewer=False,
 )
 # ------------------------------- add entities ------------------------------
 plane = scene.add_entity(gs.morphs.Plane())
 qarm_entity = scene.add_entity(
     # genesis/QARM/urdf/qarm_with_gripper.urdf
-    gs.morphs.URDF(file="genesis/QARM/urdf/QARM.urdf", fixed=True),
+    gs.morphs.URDF(file="genesis/QARM/urdf/qarm_with_gripper.urdf", fixed=True),
 )
 # ------------------------------- build scene ------------------------------
 scene.build()
