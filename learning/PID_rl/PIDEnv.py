@@ -1,6 +1,7 @@
 # Inspired by https://github.com/Genesis-Embodied-AI/genesis-world/blob/main/examples/locomotion/go2_env.py
 import genesis as gs
 
+
 class PIDEnv:
     def __init__(self, num_envs, env_cfg, obs_cfg, reward_cfg, command_cfg, show_viewer=False):
         self.num_envs: int = num_envs

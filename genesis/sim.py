@@ -16,7 +16,7 @@ gs.init(
     precision="32",
     seed=None,
     debug=False,
-    performance_mode=False,  # to change when training (to gain 30% of performance)
+    performance_mode=False,  # set to True when training (to gain 30% of performance)
     logging_level="warning",
     theme="light",
     logger_verbose_time=False,
