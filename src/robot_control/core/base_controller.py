@@ -39,6 +39,7 @@ class Controller(Dynamics, Kinematics, ABC):
         ############
         # Missions
         self.missions = deque()
+        self.finish_asked_missions = True
 
     #################################################################
     # All the abstract methods are for communication with the robot
@@ -90,6 +91,17 @@ class Controller(Dynamics, Kinematics, ABC):
         See robots/qarm/base_qarm_controller.py for an example of implementation of this method.
         """
 
+    def add_mission(self, mission: Mission):
+        """
+        This function :
+            - computes the trajectory of the mission if needed
+            - sets wanted_asked_mission to True
+            - appends the mission to the deque of missions
+        """
+        mission.compute_trajectory()
+        self.missions.append(mission)
+        self.finish_asked_missions = False
+
     def update_and_get_mission(self, t: float, X_mes: Vector3x1, dX_mes: Vector3x1) -> Mission:
         """
         Perfoms the logic of updating the missions queue and returns the current mission to execute.
@@ -99,6 +111,7 @@ class Controller(Dynamics, Kinematics, ABC):
         # Si aucune mission, rester stationnaire -> cela ajoute une mission de stationnarité à la queue
         if len(self.missions) == 0:
             self.init_stationnary()
+            self.finish_asked_missions = True
 
         # Récupération de la prochaine mission (la plus ancienne ajoutée)
         current_mission = self.missions[0]
@@ -112,6 +125,7 @@ class Controller(Dynamics, Kinematics, ABC):
                 self.missions.popleft()  # Retirer la mission terminée de la queue
                 if len(self.missions) == 0:
                     self.init_stationnary()  # Si plus de mission, rester stationnaire
+                    self.finish_asked_missions = True
                 current_mission = self.missions[0]  # Passer à la mission suivante
 
         if current_mission.start_time is None:

@@ -89,3 +89,6 @@ class CircleMission(Mission):
     def get_waypoint_at_t(self, t):
         """Retourne le waypoint désiré à l'instant t."""
         return self.waypoints[int(t / self.timestep) % len(self.waypoints)]
+
+    def compute_trajectory(self):
+        pass

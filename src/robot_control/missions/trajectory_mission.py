@@ -16,13 +16,24 @@ class MultiTrajectoryMission(Mission):
     """
 
     def __init__(
-        self, waypoints: Union[Waypoint, List[Waypoint]], ini_waypoint: Optional[Waypoint] = None
+        self,
+        waypoints: Union[Waypoint, List[Waypoint]],
+        ini_waypoint: Optional[Waypoint] = None,
+        time_per_segment: Optional[Union[float, List[float]]] = None,
     ):
         """
         ini_waypoint: waypoint initial (3D). Les vitesses et accélérations initiales et finales (respectivement du premier et dernier waypoint) doivent être nulles par mesure de sécurité.
         waypoints: liste de Waypoint définissant les segments de la trajectoire
+        time_per_segment: durée de chaque segment (optionnel, si non spécifié, la durée sera calculée automatiquement)
         """
         super().__init__()
+
+        if isinstance(time_per_segment, list):
+            if not isinstance(waypoints, list) or len(time_per_segment) != len(waypoints):
+                raise ValueError(
+                    "Si time_per_segment est une liste, waypoints doit être une liste de Waypoint."
+                )
+        self.time_per_segment = time_per_segment
 
         self.ini_waypoint = (
             ini_waypoint  # Peut être défini plus tard via set_ini_waypoint() si besoin
@@ -84,6 +95,11 @@ class MultiTrajectoryMission(Mission):
             coeffs, segment_duration = get_quintic_coeffs_and_time(
                 waypoint_start=self.ini_waypoint if i == 0 else self.waypoints[i - 1],
                 waypoint_end=wp,
+                tf=(
+                    self.time_per_segment[i]
+                    if isinstance(self.time_per_segment, list)
+                    else self.time_per_segment
+                ),
             )
 
             # On stocke le segment avec son intervalle de temps

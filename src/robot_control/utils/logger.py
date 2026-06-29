@@ -1,7 +1,7 @@
 def robot_says_phase(phase: str):
     """Utility function to print the current phase of the robot in a visually distinct way."""
 
-    hashtags = "#" * (len(phase) + 8)
+    hashtags = "#" * (len(phase) + 10)
 
     print("\n" f"{hashtags}\n" f"#    {phase}    #\n" f"{hashtags}")
 

@@ -170,7 +170,7 @@
     </joint>
 
     <!-- ATTENTION CECI N'EST PAS L'END EFFECTOR REEL DU ROBOT QARM, la masse total et l'inertie correspondent néanmoins à la masse et l'inertie de l'end effector réel -->
-   <!--<link name="END_EFFECTOR">
+   <link name="END_EFFECTOR_BASE">
         <inertial>
             <origin xyz="0 0 0.050199999999999995" rpy="0 0 0" />
             <mass value="0.257" />
@@ -185,11 +185,12 @@
             <origin xyz="0 0 0.075" rpy="0 0 0" />
             <geometry><box size="0.02 0.10 0.15" /></geometry>
         </collision>
-    </link>-->
+    </link>
 
 <!-- See https://github.com/quanser/urdf_representations/tree/main/qarm_gripper for the original urdf representation of the gripper (it will not work here, hence the modifications). We put almost all the weight and inertia in the gripper base -->
 
     <!-- End Effector Base -->
+     <!--
   <link
     name="END_EFFECTOR_BASE">
     <inertial>
@@ -220,7 +221,7 @@
           filename="../meshes/END_EFFECTOR_BASE.STL" />
       </geometry>
     </collision>
-  </link>
+  </link> -->
 
   <!-- Finger A -->
    <!--

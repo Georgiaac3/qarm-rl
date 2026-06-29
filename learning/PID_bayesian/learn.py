@@ -1,9 +1,10 @@
 import numpy as np
 
 import genesis as gs
+from robot_control.robots.qarm import SimQArmController
 
 
-def create_black_box_function():
+def create_black_box_function(qarm_controller):
     """
     Creates a black-box function that gives the performance of real PID gains for a given sequence of predefined trajectory missions.
 
@@ -23,9 +24,16 @@ def create_black_box_function():
         Returns:
         - The reward (error metric)
         """
-        # Simulate some performance metric based on the PID gains
-        # This is a placeholder for the actual simulation logic
-        performance_metric = (Kp - 1) ** 2 + (Ki - 0.5) ** 2 + (Kd - 0.1) ** 2
+        # Set the PID gains in the QArm controller
+        qarm_controller.Kp = Kp * np.eye(3)
+        qarm_controller.Ki = Ki * np.eye(3)
+        qarm_controller.Kd = Kd * np.eye(3)
+
+        # Reset the QArm controller and the missions
+        # Create the missions sequence
+
+        qarm_controller.reset_pos()
+
         return performance_metric
 
     return black_box_function
@@ -75,7 +83,7 @@ def main():
     plane = scene.add_entity(gs.morphs.Plane())
     qarm_entity = scene.add_entity(
         # genesis/QARM/urdf/qarm_with_gripper.urdf
-        gs.morphs.URDF(file="genesis/QARM/urdf/qarm_with_gripper.urdf", fixed=True),
+        gs.morphs.URDF(file="genesis/QARM/urdf/QARM.urdf", fixed=True),
     )
     # ------------------------------- build scene ------------------------------
     scene.build()
@@ -102,10 +110,19 @@ def main():
 
     #######################################################################################################################
     # Create our custom QArm sim controller from the genesis qarm entity that will interact directly with the genesis QArm
+    qarm_controller = SimQArmController(
+        timestep=0.01,
+        Kp=np.diag([100, 100, 100]),
+        Kd=np.diag([10, 10, 10]),
+        Ki=np.diag([0, 0, 0]),
+        qarm_entity=qarm_entity,
+        dofs_idx=dofs_idx,
+    )
 
     ###############################################################
     # Create the black-boc function using this QArm sim controller
+    black_box_function = create_black_box_function(qarm_controller)
 
 
-if __name__ == "__main__":
+if __name__ == "__learn__":
     main()

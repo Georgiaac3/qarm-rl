@@ -5,7 +5,7 @@ Les missions n'ont pas pour vocation de gérer la boucle de contrôle, mais simp
 
 from abc import ABC, abstractmethod
 
-from robot_control.utils.types import Waypoint
+from robot_control.utils import Waypoint, robot_says_phase
 
 
 class Mission(ABC):
@@ -15,13 +15,7 @@ class Mission(ABC):
 
     def __init__(self):
         name = self.__class__.__name__
-        hashtags = "#" * len(name)
-        print(
-            "\n"
-            f"###############################{hashtags}###\n"
-            f"#  Nouvelle mission en créée : {name}  #\n"
-            f"###############################{hashtags}###"
-        )
+        robot_says_phase(f"Nouvelle mission en créée : {name}")
 
         self.start_time = (
             None  # Temps de début de la mission, à initialiser lors de l'empilement de la mission
@@ -38,6 +32,16 @@ class Mission(ABC):
         """Indique si la mission est terminée."""
         return self.finished
 
+    def say_hello(self):
+        """Message de bienvenue spécifique à la mission, peut être utilisé pour indiquer le début d'une nouvelle phase de la tâche."""
+        robot_says_phase(f"Mission {self.__class__.__name__} : Starting now !")
+
+    def say_goodbye(self):
+        """Message d'au revoir spécifique à la mission, peut être utilisé pour indiquer la fin d'une phase de la tâche."""
+        robot_says_phase(
+            f"Mission {self.__class__.__name__} : Finished ! Moving to the next one..."
+        )
+
     @abstractmethod
     def finish_condition(self, t: float, waypoint_mes: Waypoint) -> bool:
         """Condition de fin de la mission, à implémenter selon les besoins spécifiques de chaque mission."""
@@ -50,20 +54,6 @@ class Mission(ABC):
     def get_waypoint_at_t(self, t: float) -> Waypoint:
         """Retourne le point de consigne (position, vitesse, accélération) à l'instant t ou DoNothing."""
 
-    def say_hello(self):
-        """Message de bienvenue spécifique à la mission, peut être utilisé pour indiquer le début d'une nouvelle phase de la tâche."""
-        print(
-            "\n"
-            f"###############################{'#' * len(self.__class__.__name__)}\n"
-            f"#  Mission {self.__class__.__name__} : Starting now !  #\n"
-            f"###############################{'#' * len(self.__class__.__name__)}"
-        )
-
-    def say_goodbye(self):
-        """Message d'au revoir spécifique à la mission, peut être utilisé pour indiquer la fin d'une phase de la tâche."""
-        print(
-            "\n"
-            f"###############################{'#' * len(self.__class__.__name__)}###\n"
-            f"#  Mission {self.__class__.__name__} : Finished ! Moving to the next one...  #\n"
-            f"###############################{'#' * len(self.__class__.__name__)}###"
-        )
+    @abstractmethod
+    def compute_trajectory(self):
+        """Computes the trajectory if needed"""

@@ -59,3 +59,6 @@ class StationaryMission(Mission):
             waypoint.acceleration, 0, atol=0.05
         ):
             raise ValueError("Pour une mission de stationnarité, l'accélération doit être nulle.")
+
+    def compute_trajectory(self):
+        pass
