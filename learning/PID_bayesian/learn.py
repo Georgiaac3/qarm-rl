@@ -32,7 +32,7 @@ def create_black_box_function(qarm_controller):
         # Reset the QArm controller and the missions
         # Create the missions sequence
 
-        qarm_controller.reset_pos()
+        qarm_controller.set_state(waypoint_start)
 
         return performance_metric
 

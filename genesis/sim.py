@@ -83,6 +83,7 @@ qarm_controller = SimQArmController(
     Ki=np.diag([0, 0, 0]),
     qarm_entity=qarm_entity,
     dofs_idx=dofs_idx,
+    gs=gs,
 )
 
 qarm_controller.connect()
@@ -109,12 +110,13 @@ qarm_controller.connect()
 # )
 # qarm_controller.add_mission(mission_circle)
 
+ini_waypoint = Waypoint(
+    position=np.array([0.3, 0.0, 0.0]).reshape(3, 1),
+    velocity=None,
+    acceleration=None,
+)
+
 waypoints = [
-    Waypoint(
-        position=np.array([0.0, 0.0, 0.5]).reshape(3, 1),
-        velocity=None,
-        acceleration=None,
-    ),
     Waypoint(
         position=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
         velocity=None,
@@ -141,7 +143,7 @@ waypoints = [
         acceleration=None,
     ),
     Waypoint(
-        position=np.array([-0.5, 0.0, 0.1]).reshape(3, 1),
+        position=np.array([-0.5, -0.2, 0.1]).reshape(3, 1),
         velocity=None,
         acceleration=None,
     ),
@@ -151,20 +153,7 @@ waypoints = [
         acceleration=None,
     ),
     Waypoint(
-        position=np.array([0.0, 0.0, 0.2]).reshape(3, 1),
-        velocity=None,
-        acceleration=None,
-    ),
-]
-
-waypoints = [
-    Waypoint(
-        position=np.array([0.3, 0.3, 0.2]).reshape(3, 1),
-        velocity=None,
-        acceleration=None,
-    ),
-    Waypoint(
-        position=np.array([-0.3, -0.3, 0.2]).reshape(3, 1),
+        position=np.array([0.15, 0.0, 0.2]).reshape(3, 1),
         velocity=None,
         acceleration=None,
     ),
@@ -172,12 +161,12 @@ waypoints = [
 
 multi_trajectory_mission = MultiTrajectoryMission(
     waypoints=waypoints,
-    ini_waypoint=waypoints[0],
+    ini_waypoint=ini_waypoint,
     time_per_segment=5.0,
 )
-
 qarm_controller.add_mission(multi_trajectory_mission)
 
+qarm_controller.set_pos(ini_waypoint)
 strat_time = time.perf_counter()
 ##############
 # Go spurs go

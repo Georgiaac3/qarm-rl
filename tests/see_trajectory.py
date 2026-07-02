@@ -1,24 +1,81 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from robot_control.utils import Waypoint, get_desired_state, get_quintic_coeffs_and_time
+from robot_control.missions import MultiTrajectoryMission
+from robot_control.utils import Waypoint
 
-##############
-# Preparation
-waypoint1 = Waypoint(
-    position=np.array([0.3, 0.3, 0.2]).reshape(3, 1),
+ini_waypoint = Waypoint(
+    position=np.array([0.2, 0.0, 0.5]).reshape(3, 1),
     velocity=None,
     acceleration=None,
 )
-waypoint2 = Waypoint(
-    position=np.array([-0.3, -0.3, 0.2]).reshape(3, 1),
-    velocity=np.array([0.0, 0.0, 0.3]).reshape(3, 1),
-    acceleration=None,
-)
 
-A, tf = get_quintic_coeffs_and_time(waypoint1, waypoint2, tf=5.0)
+waypoints = [
+    Waypoint(
+        position=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
+        velocity=None,
+        acceleration=None,
+    ),
+    Waypoint(
+        position=np.array([0.3, 0.3, 0.5]).reshape(3, 1),
+        velocity=None,
+        acceleration=None,
+    ),
+    Waypoint(
+        position=np.array([0.3, 0.3, 0.1]).reshape(3, 1),
+        velocity=None,
+        acceleration=None,
+    ),
+    Waypoint(
+        position=np.array([-0.3, -0.3, 0.6]).reshape(3, 1),
+        velocity=None,
+        acceleration=None,
+    ),
+    Waypoint(
+        position=np.array([0, -0.5, 0.1]).reshape(3, 1),
+        velocity=None,
+        acceleration=None,
+    ),
+    Waypoint(
+        position=np.array([-0.5, -0.2, 0.1]).reshape(3, 1),
+        velocity=None,
+        acceleration=None,
+    ),
+    Waypoint(
+        position=np.array([-0.3, 0.3, 0.4]).reshape(3, 1),
+        velocity=None,
+        acceleration=None,
+    ),
+    Waypoint(
+        position=np.array([0.2, 0.0, 0.2]).reshape(3, 1),
+        velocity=None,
+        acceleration=None,
+    ),
+]
 
-waypoints = [get_desired_state(t, A) for t in np.linspace(0, tf, num=100)]
+# ini_waypoint = Waypoint(
+#     position=np.array([-0.5, -0.2, 0.1]).reshape(3, 1),
+#     velocity=None,
+#     acceleration=None,
+# )
+
+# waypoints = [
+#     Waypoint(
+#         position=np.array([-0.3, 0.3, 0.4]).reshape(3, 1),
+#         velocity=np.array([0., 0., 0.]).reshape(3, 1),
+#         acceleration=None,
+#     ),
+# ]
+trajectory_mission = MultiTrajectoryMission(waypoints, ini_waypoint)
+trajectory_mission.compute_trajectory()
+
+total_time = trajectory_mission.total_duration
+
+waypoints = [
+    trajectory_mission.get_waypoint_at_t(t)
+    for t in np.linspace(0, total_time, int(total_time / 10 * 300))
+]  # 50 Hz
+
 positions = [wp.position.flatten() for wp in waypoints]
 x_pos = [pos[0] for pos in positions]
 y_pos = [pos[1] for pos in positions]
@@ -72,6 +129,9 @@ ax_3d.quiver(0, 0, 0, 0, 0, length, color="blue", label="Z")
 # 's' définit la taille du point, 'c' la couleur, 'label' pour la légende
 ax_3d.scatter(*start_point, color="green", s=50, label="Départ", marker="o")
 ax_3d.scatter(*end_point, color="red", s=50, label="Arrivée", marker="x")
+# L'ensemble des waypoints
+for wp in trajectory_mission.waypoints:
+    ax_3d.scatter(*wp.position.flatten(), color="black", s=20, label="Waypoint", marker=".")
 
 # Graphique Vitesse en haut à droite
 ax_vel = fig.add_subplot(gs[0, 1])

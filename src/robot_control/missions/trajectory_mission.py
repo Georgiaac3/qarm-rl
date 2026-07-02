@@ -92,7 +92,7 @@ class MultiTrajectoryMission(Mission):
 
         for i, wp in enumerate(self.waypoints):
             # Calcul des coeffs pour ce segment précis
-            coeffs, segment_duration = get_quintic_coeffs_and_time(
+            coeffs, segment_duration, intermediate_waypoints = get_quintic_coeffs_and_time(
                 waypoint_start=self.ini_waypoint if i == 0 else self.waypoints[i - 1],
                 waypoint_end=wp,
                 tf=(
@@ -103,16 +103,27 @@ class MultiTrajectoryMission(Mission):
             )
 
             # On stocke le segment avec son intervalle de temps
-            self.segments.append(
-                {
-                    "start_t": start_time,
-                    "end_t": start_time + segment_duration,
-                    "duration": segment_duration,
-                    "coeffs": coeffs,
-                }
-            )
-
-            # Mise à jour pour le segment suivant
-            start_time += segment_duration
+            if intermediate_waypoints:
+                # Si un waypoint intermédiaire a été créé, coeffs est une liste de deux matrices et segment_duration est une liste de deux durées
+                for j, coeff in enumerate(coeffs):
+                    self.segments.append(
+                        {
+                            "start_t": start_time,
+                            "end_t": start_time + segment_duration[j],  # type: ignore
+                            "duration": segment_duration[j],  # type: ignore
+                            "coeffs": coeff,
+                        }
+                    )
+                    start_time += segment_duration[j]  # type: ignore
+            else:
+                self.segments.append(
+                    {
+                        "start_t": start_time,
+                        "end_t": start_time + segment_duration,  # type: ignore
+                        "duration": segment_duration,  # type: ignore
+                        "coeffs": coeffs,
+                    }
+                )
+                start_time += segment_duration  # type: ignore
 
         self.total_duration = start_time
