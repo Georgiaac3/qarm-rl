@@ -24,10 +24,11 @@ gs.init(
 )
 
 # ------------------------------ create scene ------------------------------
+time_per_step = 0.01  # 100hz
 scene = gs.Scene(
     sim_options=gs.options.SimOptions(
         gravity=(0, 0, -9.80665),
-        dt=0.01,
+        dt=time_per_step,
         substeps=1,
     ),
     vis_options=gs.options.VisOptions(
@@ -43,7 +44,7 @@ scene = gs.Scene(
         camera_pos=(-1.5, 1.5, 1.5),
         camera_lookat=(0.0, 0.0, 0.5),
         camera_fov=40,
-        max_FPS=60,
+        max_FPS=103,
     ),
     renderer=gs.renderers.Rasterizer(),  # using rasterizer for camera rendering
     show_viewer=True,
@@ -77,41 +78,27 @@ qarm_entity.set_dofs_force_range(
     dofs_idx_local=dofs_idx,
 )
 qarm_controller = SimQArmController(
-    timestep=0.01,
-    Kp=np.diag([100, 100, 100]),
-    Kd=np.diag([10, 10, 10]),
-    Ki=np.diag([0, 0, 0]),
+    timestep=time_per_step,
+    Kp=478.9267873576293 * np.diag([1, 1, 1]),
+    Kd=124.81491235394921 * np.diag([1, 1, 1]),
+    Ki=124.79561626896212 * np.diag([1, 1, 1]),
     qarm_entity=qarm_entity,
     dofs_idx=dofs_idx,
     gs=gs,
 )
 
-qarm_controller.connect()
-
-# ################################
-# Creating the missions sequence
-# # 5 squares #######
-# mission_square = SquareMission(
-#     center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
-#     side_length=0.4,
-#     plane=np.array([1.0, 0.0, 1.0]).reshape(3, 1),
-#     nb_of_squares=1,
-#     time_per_side=5.0,
-# )
-# qarm_controller.add_mission(mission_square)
-# # 5 circles #######
-# mission_circle = CircleMission(
-#     center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
-#     radius=0.2,
-#     plane=np.array([1.0, 0.0, 0.0]).reshape(3, 1),
-#     nb_of_circles=1,
-#     time_per_circle=10.0,
-#     timestep=qarm_controller.timestep,
-# )
-# qarm_controller.add_mission(mission_circle)
+mission_circle = CircleMission(
+    center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
+    radius=0.2,
+    plane=np.array([1.0, 0.0, 0.0]).reshape(3, 1),
+    nb_of_circles=10,
+    time_per_circle=2.0,
+    timestep=qarm_controller.timestep,
+)
+qarm_controller.add_mission(mission_circle)
 
 ini_waypoint = Waypoint(
-    position=np.array([0.3, 0.0, 0.0]).reshape(3, 1),
+    position=np.array([0.2, 0.0, 0.5]).reshape(3, 1),
     velocity=None,
     acceleration=None,
 )
@@ -153,7 +140,7 @@ waypoints = [
         acceleration=None,
     ),
     Waypoint(
-        position=np.array([0.15, 0.0, 0.2]).reshape(3, 1),
+        position=np.array([0.4, 0.0, 0.2]).reshape(3, 1),
         velocity=None,
         acceleration=None,
     ),
@@ -162,20 +149,20 @@ waypoints = [
 multi_trajectory_mission = MultiTrajectoryMission(
     waypoints=waypoints,
     ini_waypoint=ini_waypoint,
-    time_per_segment=5.0,
 )
 qarm_controller.add_mission(multi_trajectory_mission)
 
-qarm_controller.set_pos(ini_waypoint)
-strat_time = time.perf_counter()
+waypoint_start = Waypoint(
+    position=np.array([0.3, 0.0, 0.4]).reshape(3, 1),
+    velocity=None,
+    acceleration=None,
+)
+qarm_controller.set_pos(waypoint_start)
+start_time = time.perf_counter()
+
 ##############
 # Go spurs go
 for _ in range(10 * 1000):
-    # print(
-    #    f"Time: {scene.cur_t:.2f} s vs Real Time: {time.perf_counter() - strat_time:.2f} s",
-    #    end="\r",
-    # )
-
     qarm_controller._update_packet()
 
     cmd = qarm_controller.compute_command(scene.cur_t)

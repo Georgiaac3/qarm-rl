@@ -10,10 +10,10 @@ from robot_control.utils import CommandEnum, robot_says_phase
 class Routine1:  # (Routine):
     def __init__(self, display_data_queue=None, stop_event=None):
         self.qarm_controller = RealQArmController(
-            timestep=0.005,
-            Kp=200 * np.eye(3),
-            Kd=90 * np.eye(3),
-            Ki=0.0 * np.eye(3),
+            timestep=0.01,
+            Kp=478.9267873576293 * np.diag([1, 1, 1]),
+            Kd=124.81491235394921 * np.diag([1, 1, 1]),
+            Ki=124.79561626896212 * np.diag([1, 1, 1]),
             display=True,
             display_data_queue=display_data_queue,
             command_type=CommandEnum.TORQUES,
@@ -33,7 +33,7 @@ class Routine1:  # (Routine):
             center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
             side_length=0.4,
             plane=np.array([1.0, 0.0, 1.0]).reshape(3, 1),
-            nb_of_squares=5,
+            nb_of_squares=50,
             time_per_side=5.0,
         )
         mission_square.compute_trajectory()

@@ -28,6 +28,7 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         Ki: Matrix3x3,
         display: bool = False,
         display_data_queue=None,
+        metrics: bool = False,
     ):
         super().__init__()
 
@@ -49,17 +50,20 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         )  # Terme intégral initialisé à zéro pour le contrôle en position
 
         ############################
-        # Display setup
+        # Metric and display setup
         self.display = display
-        if display:
-            self.display_data_queue = display_data_queue
+        self.metrics = metrics
 
+        if metrics or display:
             self.last_phi_mes = np.zeros((4, 1))
             self.last_dphi_mes = np.zeros((4, 1))
             self.last_X_mes = np.zeros((3, 1))
             self.last_X_des = np.zeros((3, 1))
             self.last_dX_mes = np.zeros((3, 1))
             self.last_dX_des = np.zeros((3, 1))
+
+        if display:
+            self.display_data_queue = display_data_queue
 
     def compute_command(
         self,
@@ -124,6 +128,15 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         # Computing the command
         # Get the target waypoint at time t
         waypoint_desired = current_mission.get_waypoint_at_t(t - current_mission.start_time)
+
+        if (
+            waypoint_desired.acceleration is None
+            or waypoint_desired.velocity is None
+            or waypoint_desired.position is None
+        ):
+            raise ValueError(
+                f"Waypoint at time {t} is not fully defined. It should have position, velocity, and acceleration. Waypoint: {waypoint_desired}"
+            )
 
         X_des = waypoint_desired.position
         dX_des = waypoint_desired.velocity
@@ -200,15 +213,15 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
         # Normalization of the voltage signal between -1 and 1
         pwm = np.clip(Vcmd / self.Valim, -1, 1)
 
-        if np.any(Vcmd / self.Valim > 1) or np.any(Vcmd / self.Valim < -1):
-            print(
-                "Warning: Commande de tension dépassant les limites d'alimentation. Vcmd/Valim:",
-                Vcmd.ravel() / self.Valim,
-            )
+        # if np.any(Vcmd / self.Valim > 1) or np.any(Vcmd / self.Valim < -1):
+        #    print(
+        #        "Warning: Commande de tension dépassant les limites d'alimentation. Vcmd/Valim:",
+        #        Vcmd.ravel() / self.Valim,
+        #    )
 
         ##############################################
         # Management of the variables for the display
-        if self.display:
+        if self.display or self.metrics:
             self.last_phi_mes = phi_mes
             self.last_dphi_mes = dphi_mes
             self.last_X_des = X_des

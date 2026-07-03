@@ -7,6 +7,7 @@ import multiprocessing as mp
 
 from routines.routine1 import Routine1
 from routines.routine2 import Routine2
+from routines.routine3 import Routine3
 from src.robot_control.ui.dashboard import RealTimeApp
 
 
@@ -16,8 +17,8 @@ def parse_args():
         "--routine",
         type=int,
         default=1,
-        choices=(1, 2),
-        help="Numéro de la routine à lancer (1 ou 2).",
+        choices=(1, 2, 3),
+        help="Numéro de la routine à lancer (1 ou 2 ou 3).",
     )
     return parser.parse_args()
 
@@ -27,6 +28,8 @@ def build_routine(routine_id, data_queue, stop_event):
         return Routine1(display_data_queue=data_queue, stop_event=stop_event)
     if routine_id == 2:
         return Routine2(display_data_queue=data_queue, stop_event=stop_event)
+    if routine_id == 3:
+        return Routine3(display_data_queue=data_queue, stop_event=stop_event)
     raise ValueError(f"Routine inconnue: {routine_id}")
 
 

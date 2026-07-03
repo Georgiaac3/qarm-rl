@@ -4,6 +4,7 @@ This script needs to be launch in parallel of a routine : they will communicate 
 
 import socket
 import struct
+import time
 
 import numpy as np
 
@@ -56,7 +57,7 @@ scene = gs.Scene(
         camera_pos=(-1.5, 1.5, 1.5),
         camera_lookat=(0.0, 0.0, 0.5),
         camera_fov=40,
-        max_FPS=60,
+        max_FPS=104,
     ),
     renderer=gs.renderers.Rasterizer(),  # using rasterizer for camera rendering
     show_viewer=True,
@@ -166,18 +167,25 @@ def apply_torques(torques):
     qarm.control_dofs_force(torques, dofs_idx)
 
 
+start_time = time.perf_counter()
+scene_time = 0.0
 for _ in range(10 * 3000):
+    # print(
+    #    f"Time: {scene.cur_t:.2f} s vs Real Time: {time.perf_counter() - start_time:.2f} s Difference: {scene.cur_t-(time.perf_counter() - start_time):.2f} s", # Le rapport n'est pas un bon indicateur car les temps deviennet grand devant la différence qu'elle soit faible ou très faible. Et même si ça dérive de plus en plus.
+    #    end="\r",
+    # )
     # qarm.set_dofs_position(np.array([0., np.pi/8, np.pi/4, 0.]),dofs_idx)
 
     scene.step()
     # print("Attente de connexion du client...")
     connexion = try_connect()
     if connexion:
+        scene_time = scene.cur_t
         print("Connexion établie avec le client.")
         break
 
     # com_pos = qarm.get_links_pos(links_idx_local=[4], ref="link_com")
-#
+
 ## Draw a sphere at the COM position
 # scene.draw_debug_sphere(pos=com_pos, radius=0.01, color=(1, 0, 0, 1))
 

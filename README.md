@@ -90,6 +90,9 @@ Pour choisir explicitement la routine :
 ```bash
 python main.py --routine 1
 python main.py --routine 2
+...
+python main.py --routine i
+...
 ```
 
 ### Avec Simulink

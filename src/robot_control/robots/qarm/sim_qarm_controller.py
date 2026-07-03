@@ -17,9 +17,18 @@ class SimQArmController(BaseQArmController):
         qarm_entity: RigidEntity,
         dofs_idx: list[int],
         gs,
+        metrics: bool = False,
     ):
         BaseQArmController.__init__(
-            self, timestep, CommandEnum.TORQUES, Kp, Kd, Ki, display=False, display_data_queue=None
+            self,
+            timestep,
+            CommandEnum.TORQUES,
+            Kp,
+            Kd,
+            Ki,
+            display=False,
+            display_data_queue=None,
+            metrics=metrics,
         )
         self.qarm_entity = qarm_entity
         self.dofs_idx = dofs_idx

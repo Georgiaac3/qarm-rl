@@ -47,7 +47,7 @@ waypoints = [
         acceleration=None,
     ),
     Waypoint(
-        position=np.array([0.2, 0.0, 0.2]).reshape(3, 1),
+        position=np.array([0.4, 0.0, 0.2]).reshape(3, 1),
         velocity=None,
         acceleration=None,
     ),
