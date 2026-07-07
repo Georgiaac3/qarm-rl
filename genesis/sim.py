@@ -79,23 +79,13 @@ qarm_entity.set_dofs_force_range(
 )
 qarm_controller = SimQArmController(
     timestep=time_per_step,
-    Kp=478.9267873576293 * np.diag([1, 1, 1]),
-    Kd=124.81491235394921 * np.diag([1, 1, 1]),
-    Ki=124.79561626896212 * np.diag([1, 1, 1]),
+    Kp=441.09732585520067 * np.diag([1, 1, 1]),
+    Kd=195.40127271879317 * np.diag([1, 1, 1]),
+    Ki=104.63321198526842 * np.diag([1, 1, 1]),
     qarm_entity=qarm_entity,
     dofs_idx=dofs_idx,
     gs=gs,
 )
-
-mission_circle = CircleMission(
-    center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
-    radius=0.2,
-    plane=np.array([1.0, 0.0, 0.0]).reshape(3, 1),
-    nb_of_circles=10,
-    time_per_circle=2.0,
-    timestep=qarm_controller.timestep,
-)
-qarm_controller.add_mission(mission_circle)
 
 ini_waypoint = Waypoint(
     position=np.array([0.2, 0.0, 0.5]).reshape(3, 1),

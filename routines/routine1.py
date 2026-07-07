@@ -11,9 +11,9 @@ class Routine1:  # (Routine):
     def __init__(self, display_data_queue=None, stop_event=None):
         self.qarm_controller = RealQArmController(
             timestep=0.01,
-            Kp=478.9267873576293 * np.diag([1, 1, 1]),
-            Kd=124.81491235394921 * np.diag([1, 1, 1]),
-            Ki=124.79561626896212 * np.diag([1, 1, 1]),
+            Kp=720.8212651581156 * np.diag([1, 1, 1]),
+            Kd=161.97199510690137 * np.diag([1, 1, 1]),
+            Ki=200.62867598716642 * np.diag([1, 1, 1]),
             display=True,
             display_data_queue=display_data_queue,
             command_type=CommandEnum.TORQUES,

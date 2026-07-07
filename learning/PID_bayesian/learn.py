@@ -2,7 +2,7 @@ import numpy as np
 from bayes_opt import BayesianOptimization
 
 import genesis as gs
-from robot_control.missions import MultiTrajectoryMission
+from robot_control.missions import CircleMission, MultiTrajectoryMission, SquareMission
 from robot_control.robots.qarm import SimQArmController
 from robot_control.utils import Waypoint
 
@@ -63,6 +63,33 @@ def get_computed_trajectory():
     return trajectory_mission, ini_waypoint
 
 
+def get_computed_circles(timestep):
+    mission_circle = CircleMission(
+        center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
+        radius=0.2,
+        plane=np.array([1.0, 0.0, 0.0]).reshape(3, 1),
+        nb_of_circles=5,
+        time_per_circle=10.0,
+        timestep=timestep,
+    )
+    mission_circle.compute_trajectory()
+
+    return mission_circle
+
+
+def get_computed_squares():
+    mission_square = SquareMission(
+        center=np.array([0.3, 0.0, 0.5]).reshape(3, 1),
+        side_length=0.4,
+        plane=np.array([1.0, 0.0, 1.0]).reshape(3, 1),
+        nb_of_squares=50,
+        time_per_side=5.0,
+    )
+    mission_square.compute_trajectory()
+
+    return mission_square
+
+
 def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scene):
     """
     Creates a black-box function that gives the performance of real PID gains for a given sequence of predefined trajectory missions.
@@ -71,27 +98,27 @@ def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scen
     - A function that takes Kp, Ki, and Kd as inputs and returns the performance metric.
     """
 
-    computed_trajectory, waypoint_start = (
-        get_computed_trajectory()
-    )  # Assuming this function is defined elsewhere to get the computed trajectory
+    computed_trajectory, waypoint_start = get_computed_trajectory()
 
-    def black_box_function(Kp, Ki, Kd):
+    def black_box_function(Kp1, Kp2, Kp3, Ki1, Ki2, Ki3, Kd1, Kd2, Kd3):
         """
         A black-box function that gives the performance of real PID gains for a given sequence of predefined trajectory missions.
 
         Parameters:
-        - Kp: Proportional gain
-        - Ki: Integral gain
-        - Kd: Derivative gain
+        - Kp1, Kp2, Kp3: Proportional gains
+        - Ki1, Ki2, Ki3: Integral gains
+        - Kd1, Kd2, Kd3: Derivative gains
 
         Returns:
         - The reward (error metric)
         """
-        print(f"Evaluating PID gains: Kp={Kp}, Ki={Ki}, Kd={Kd}")
         # Set the PID gains in the QArm controller
-        qarm_controller.Kp = Kp * np.eye(3)
-        qarm_controller.Ki = Ki * np.eye(3)
-        qarm_controller.Kd = Kd * np.eye(3)
+        qarm_controller.Kp = np.array([[Kp1, 0, 0], [0, Kp2, 0], [0, 0, Kp3]])
+        qarm_controller.Ki = np.array([[Ki1, 0, 0], [0, Ki2, 0], [0, 0, Ki3]])
+        qarm_controller.Kd = np.array([[Kd1, 0, 0], [0, Kd2, 0], [0, 0, Kd3]])
+
+        # Reset the scene
+        scene.reset()
 
         # Reset the missions that are allready computed
         qarm_controller.missions.clear()
@@ -121,7 +148,7 @@ def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scen
             last_dX_mes = qarm_controller.last_dX_mes
             last_dX_des = qarm_controller.last_dX_des
 
-            perf -= np.linalg.norm(last_X_mes - last_X_des) + np.linalg.norm(
+            perf -= i * np.linalg.norm(last_X_mes - last_X_des) + i * np.linalg.norm(
                 last_dX_mes - last_dX_des
             )
 
@@ -131,7 +158,7 @@ def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scen
                 nb_steps = i + 1
                 break
 
-        perf /= nb_steps
+        # perf /= nb_steps
 
         return float(perf)
 
@@ -143,40 +170,18 @@ def main():
     # Create the genesis environment (scene, entity, etc)
     # ------------------------------ init Genesis ------------------------------
     gs.init(
-        backend=gs.gpu,
-        precision="32",
-        seed=None,
-        debug=False,
         performance_mode=True,  # set to True when training (to gain 30% of performance)
         logging_level="warning",
-        theme="light",
-        logger_verbose_time=False,
     )
 
     # ------------------------------ create scene ------------------------------
     scene = gs.Scene(
         sim_options=gs.options.SimOptions(
             gravity=(0, 0, -9.80665),
-            dt=0.01,
-            substeps=1,
+            dt=0.02,
+            substeps=2,
         ),
-        vis_options=gs.options.VisOptions(
-            show_world_frame=True,  # visualize the coordinate frame of `world` at its origin
-            world_frame_size=1.0,  # length of the world frame in meter
-            show_link_frame=False,  # visualizing the coordinate frames of entity links
-            show_cameras=False,  # do not visualize mesh and frustum of the cameras added
-            plane_reflection=False,  # turn off plane reflection
-            ambient_light=(0.1, 0.1, 0.1),  # ambient light setting
-        ),
-        viewer_options=gs.options.ViewerOptions(
-            res=(1280, 960),  # (2560, 1920),
-            camera_pos=(-1.5, 1.5, 1.5),
-            camera_lookat=(0.0, 0.0, 0.5),
-            camera_fov=40,
-            max_FPS=60,
-        ),
-        renderer=gs.renderers.Rasterizer(),  # using rasterizer for camera rendering
-        show_viewer=False,
+        # renderer=gs.renderers.Rasterizer(),  # using rasterizer for camera rendering
     )
     # ------------------------------- add entities ------------------------------
     plane = scene.add_entity(gs.morphs.Plane())
@@ -227,16 +232,27 @@ def main():
     optimizer = BayesianOptimization(
         f=black_box_function,
         pbounds={
-            "Kp": (0, 800),
-            "Ki": (0, 800),
-            "Kd": (0, 800),
+            "Kp1": (0, 800),
+            "Kp2": (0, 800),
+            "Kp3": (0, 800),
+            "Ki1": (0, 800),
+            "Ki2": (0, 800),
+            "Ki3": (0, 800),
+            "Kd1": (0, 800),
+            "Kd2": (0, 800),
+            "Kd3": (0, 800),
         },
         random_state=42,
     )
+
+    optimizer.load_state("learning/PID_bayesian/PID_bayesian_optimization_state_9var.json")
+
     optimizer.maximize(
-        init_points=5,
-        n_iter=25,
+        init_points=20,
+        n_iter=800,
     )
+
+    optimizer.save_state("learning/PID_bayesian/PID_bayesian_optimization_state_9var.json")
 
     print("Best PID gains found:")
     print(optimizer.max)

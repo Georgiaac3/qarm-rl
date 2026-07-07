@@ -67,3 +67,6 @@ video*.mp4
 *.zip
 *.pkl
 events.out.tfevents.*
+
+# Learning
+learning/PID_bayesian/PID_bayesian_optimization_state_9var.json
