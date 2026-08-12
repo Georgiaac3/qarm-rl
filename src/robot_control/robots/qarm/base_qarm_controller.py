@@ -171,7 +171,7 @@ class BaseQArmController(Controller, QArmDynamics, QArmKinematics, ABC):
 
         B_signals = self.coriolis_velocity_signals(dq_mes)
 
-        # Total torque to be applied
+        # Total torque to be applied, size of 4x1
         tau_cmd = M @ ddq_cmd
         tau_cmd += B @ B_signals
         tau_cmd += C @ dq_mes**2

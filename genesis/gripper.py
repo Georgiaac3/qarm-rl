@@ -22,9 +22,9 @@ scene = gs.Scene(
         substeps=1,
     ),
     vis_options=gs.options.VisOptions(
-        show_world_frame=True,  # visualize the coordinate frame of `world` at its origin
+        show_world_frame=False,  # visualize the coordinate frame of `world` at its origin
         world_frame_size=1.0,  # length of the world frame in meter
-        show_link_frame=True,  # visualizing the coordinate frames of entity links
+        show_link_frame=False,  # visualizing the coordinate frames of entity links
         show_cameras=False,  # do not visualize mesh and frustum of the cameras added
         plane_reflection=False,  # turn off plane reflection
         ambient_light=(0.1, 0.1, 0.1),  # ambient light setting
@@ -42,7 +42,7 @@ scene = gs.Scene(
 # ------------------------------- add entities ------------------------------
 plane = scene.add_entity(gs.morphs.Plane())
 gripper = scene.add_entity(
-    gs.morphs.URDF(file="QARM/urdf/gripper.urdf", fixed=True),
+    gs.morphs.URDF(file="genesis/QARM/urdf/gripper.urdf", fixed=True),
 )
 # cube = scene.add_entity(
 #    gs.morphs.Box(size=(0.1, 0.3, 0.4), pos=(0.3, 0, 0.2)),

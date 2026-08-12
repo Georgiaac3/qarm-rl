@@ -1,0 +1,80 @@
+<mujoco model="QARM">
+  <compiler angle="radian"/>
+
+  <asset>
+    <mesh name="base_link" content_type="model/stl" file="../meshes/base_link.stl"/>
+    <mesh name="YAW" content_type="model/stl" file="../meshes/YAW.stl"/>
+    <mesh name="BICEP" content_type="model/stl" file="../meshes/BICEP.stl"/>
+    <mesh name="FOREARM" content_type="model/stl" file="../meshes/FOREARM.stl"/>
+    <mesh name="END_EFFECTOR" content_type="model/stl" file="../meshes/END_EFFECTOR.stl"/>
+    <mesh name="END_EFFECTOR_BASE" content_type="model/stl" file="../meshes/END_EFFECTOR_BASE.stl"/>
+    <mesh name="LINK1A" content_type="model/stl" file="../meshes/LINK1A.stl"/>
+    <mesh name="LINK2A" content_type="model/stl" file="../meshes/LINK2A.stl"/>
+    <mesh name="LINK1B" content_type="model/stl" file="../meshes/LINK1B.stl"/>
+    <mesh name="LINK2B" content_type="model/stl" file="../meshes/LINK2B.stl"/>
+  </asset>
+
+  <!-- tendon : useful to simulate the gripper behaving. Foreach finger, the first phalange 1 closes then the second one closes when touching an object -->
+  <tendon>
+    <fixed name="grasp_tendon">
+      <joint joint="JOINT1A" coef="1.0"/>
+      <joint joint="JOINT2A" coef="0.5"/>
+      <joint joint="JOINT1B" coef="-1.0"/>
+      <joint joint="JOINT2B" coef="-0.5"/>
+    </fixed>
+  </tendon>
+
+  <!-- actuator : controls the gripper motion, for the unique tendon -->
+  <actuator>
+    <motor name="gripper_motor" tendon="grasp_tendon" gear="20" ctrlrange="-5 5"/>
+  </actuator>
+
+  <worldbody>
+    <geom type="mesh" rgba="0.752941 0.752941 0.752941 1" mesh="base_link"/>
+    <body name="YAW">
+      <inertial pos="9.37419e-09 -3.48811e-09 0.115814" quat="0.5 0.5 -0.5 0.5" mass="0.701519" diaginertia="0.000625068 0.00047898 0.000450831"/>
+      <joint name="YAW" pos="0 0 0" axis="0 0 1" range="-2.967 2.967"/>
+      <geom type="mesh" rgba="0.752941 0.752941 0.752941 1" mesh="YAW"/>
+      <body name="BICEP" pos="0 0 0.139771" quat="0.707107 -0.707107 0 0">
+        <inertial pos="0.0136584 -0.234779 -7.06002e-05" quat="0.496287 0.496472 -0.503119 0.504069" mass="0.706073" diaginertia="0.00246775 0.00242444 0.000274338"/>
+        <joint name="SHOULDER" pos="0 0 0" axis="0 0 1" range="-1.483 1.483"/>
+        <geom type="mesh" rgba="0.752941 0.752941 0.752941 1" mesh="BICEP"/>
+        <body name="FOREARM" pos="0.05 -0.35 0" quat="0.755454 0 0 -0.655202">
+          <inertial pos="0.0372713 0.155357 0.000271724" quat="0.712239 0.698218 -0.0509713 -0.0510822" mass="0.429667" diaginertia="0.000348699 0.000297778 0.000145424"/>
+          <joint name="ELBOW" pos="0 0 0" axis="0 0 1" range="-1.658 1.309"/>
+          <geom type="mesh" rgba="0.752941 0.752941 0.752941 1" mesh="FOREARM"/>
+          <body name="END_EFFECTOR" pos="0.0336612 0.235608 0" quat="0.705328 -0.705328 0.0501261 -0.0501261">
+            <inertial pos="0.000107378 0.0275444 -0.0126682" quat="0.572065 0.416736 -0.417598 0.56981" mass="0.353921" diaginertia="0.000120383 8.99238e-05 6.94267e-05"/>
+            <joint name="WRIST" pos="0 0 0" axis="0 0 1" range="-3.01 3.01"/>
+            <geom type="mesh" rgba="0.752941 0.752941 0.752941 1" mesh="END_EFFECTOR"/>
+            <geom type="mesh" rgba="0.86667 0.86667 0.8902 1" mesh="END_EFFECTOR_BASE"/>
+
+            <!-- finger A -->
+            <body name="LINK1A" pos="0.01 0.03075 0.0399">
+              <inertial pos="0 0 0" quat="0.510465 0.489262 -0.510496 0.489329" mass="0.075987" diaginertia="2.1417e-05 2.09788e-05 3.23917e-06"/>
+              <joint name="JOINT1A" pos="0 0 0" axis="1 0 0" range="-0.9 0.9" actuatorfrcrange="-10 10"/>
+              <geom type="mesh" rgba="0.75294 0.75294 0.75294 1" mesh="LINK1A"/>
+              <body name="LINK2A" pos="-0.000842 -0.000324 0.07">
+                <inertial pos="-0.00490949 0.015611 -0.0201805" quat="0.520698 0.478407 -0.520698 0.478407" mass="0.0291073" diaginertia="6.34957e-06 5.7445e-06 1.00714e-06"/>
+                <joint name="JOINT2A" pos="0 0 0" axis="1 0 0" range="-0.9 0.9" actuatorfrcrange="-10 10"/>
+                <geom type="mesh" rgba="0.752941 0.752941 0.752941 1" mesh="LINK2A"/>
+              </body>
+            </body>
+
+            <!-- finger B-->
+            <body name="LINK1B" pos="0.01 -0.03075 0.0399">
+              <inertial pos="0 0 0" quat="0.489262 0.510465 -0.489329 0.510496" mass="0.075987" diaginertia="2.1417e-05 2.09788e-05 3.23917e-06"/>
+              <joint name="JOINT1B" pos="0 0 0" axis="1 0 0" range="-0.9 0.9" actuatorfrcrange="-10 10"/>
+              <geom type="mesh" rgba="1 1 1 1" mesh="LINK1B"/>
+              <body name="LINK2B" pos="-0.000842 0.000324 0.07">
+                <inertial pos="-0.00490949 0.015611 -0.0201805" quat="0.478407 0.520698 -0.478407 0.520698" mass="0.0291073" diaginertia="6.34957e-06 5.7445e-06 1.00714e-06"/>
+                <joint name="JOINT2B" pos="0 0 0" axis="1 0 0" range="-0.9 0.9" actuatorfrcrange="-10 10"/>
+                <geom type="mesh" rgba="0.752941 0.752941 0.752941 1" mesh="LINK2B"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

@@ -90,7 +90,7 @@ def get_computed_squares():
     return mission_square
 
 
-def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scene):
+def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scene, dofs_idx: list):
     """
     Creates a black-box function that gives the performance of real PID gains for a given sequence of predefined trajectory missions.
 
@@ -100,22 +100,25 @@ def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scen
 
     computed_trajectory, waypoint_start = get_computed_trajectory()
 
-    def black_box_function(Kp1, Kp2, Kp3, Ki1, Ki2, Ki3, Kd1, Kd2, Kd3):
+    def black_box_function(Kp, Ki, Kd):
         """
         A black-box function that gives the performance of real PID gains for a given sequence of predefined trajectory missions.
 
         Parameters:
-        - Kp1, Kp2, Kp3: Proportional gains
-        - Ki1, Ki2, Ki3: Integral gains
-        - Kd1, Kd2, Kd3: Derivative gains
+        - Kp: Proportional gain
+        - Ki: Integral gain
+        - Kd: Derivative gain
 
         Returns:
         - The reward (error metric)
         """
         # Set the PID gains in the QArm controller
-        qarm_controller.Kp = np.array([[Kp1, 0, 0], [0, Kp2, 0], [0, 0, Kp3]])
-        qarm_controller.Ki = np.array([[Ki1, 0, 0], [0, Ki2, 0], [0, 0, Ki3]])
-        qarm_controller.Kd = np.array([[Kd1, 0, 0], [0, Kd2, 0], [0, 0, Kd3]])
+        # qarm_controller.Kp = np.array([[Kp1, 0, 0], [0, Kp2, 0], [0, 0, Kp3]])
+        # qarm_controller.Ki = np.array([[Ki1, 0, 0], [0, Ki2, 0], [0, 0, Ki3]])
+        # qarm_controller.Kd = np.array([[Kd1, 0, 0], [0, Kd2, 0], [0, 0, Kd3]])
+        qarm_controller.Kp = Kp * np.diag([1, 1, 1])
+        qarm_controller.Ki = Ki * np.diag([1, 1, 1])
+        qarm_controller.Kd = Kd * np.diag([1, 1, 1])
 
         # Reset the scene
         scene.reset()
@@ -132,6 +135,17 @@ def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scen
         perf = 0
         nb_steps = 0
 
+        # To stop the gripper parts from moving, part 1
+        gripper_dofs = dofs_idx[3:]
+        print("gripper_dofs", gripper_dofs)
+
+        qarm_controller.qarm_entity.set_dofs_kp(
+            [4000.0] * len(gripper_dofs), dofs_idx_local=gripper_dofs
+        )
+        qarm_controller.qarm_entity.set_dofs_kv(
+            [100.0] * len(gripper_dofs), dofs_idx_local=gripper_dofs
+        )
+
         # Run the simulation for the duration of the trajectory
         for i in range(
             100 * 1000
@@ -141,6 +155,14 @@ def create_black_box_function(qarm_controller: SimQArmController, scene: gs.Scen
             cmd = qarm_controller.compute_command(scene.cur_t)
             if cmd is not None:
                 qarm_controller._send_command(cmd)
+
+                # To stop the gripper parts from moving, part 2
+                current_pos = qarm_controller.qarm_entity.get_dofs_position(
+                    dofs_idx_local=gripper_dofs
+                )
+                qarm_controller.qarm_entity.control_dofs_position(
+                    current_pos, dofs_idx_local=gripper_dofs
+                )
 
             # Computes the performance metric
             last_X_mes = qarm_controller.last_X_mes
@@ -186,8 +208,8 @@ def main():
     # ------------------------------- add entities ------------------------------
     plane = scene.add_entity(gs.morphs.Plane())
     qarm_entity = scene.add_entity(
-        # genesis/QARM/urdf/qarm_with_gripper.urdf
-        gs.morphs.URDF(file="genesis/QARM/urdf/QARM.urdf", fixed=True),
+        # gs.morphs.URDF(file="genesis/QARM/urdf/QARM.urdf", fixed=True),
+        gs.morphs.URDF(file="genesis/QARM/urdf/qarm_gripper_com.urdf", fixed=True),
     )
     # ------------------------------- build scene ------------------------------
     scene.build()
@@ -198,10 +220,10 @@ def main():
         "SHOULDER",
         "ELBOW",
         "WRIST",
-        # "JOINT1A",
-        # "JOINT2A",
-        # "JOINT1B",
-        # "JOINT2B",
+        "JOINT1A",
+        "JOINT2A",
+        "JOINT1B",
+        "JOINT2B",
     ]
 
     dofs_idx = [qarm_entity.get_joint(name).dofs_idx_local[0] for name in joint_names]
@@ -227,32 +249,42 @@ def main():
 
     ###############################################################
     # Create the black-boc function using this QArm sim controller
-    black_box_function = create_black_box_function(qarm_controller, scene)
+    black_box_function = create_black_box_function(qarm_controller, scene, dofs_idx)
+
+    # optimizer = BayesianOptimization(
+    #     f=black_box_function,
+    #     pbounds={
+    #         "Kp1": (0, 800),
+    #         "Kp2": (0, 800),
+    #         "Kp3": (0, 800),
+    #         "Ki1": (0, 800),
+    #         "Ki2": (0, 800),
+    #         "Ki3": (0, 800),
+    #         "Kd1": (0, 800),
+    #         "Kd2": (0, 800),
+    #         "Kd3": (0, 800),
+    #     },
+    #     random_state=42,
+    # )
 
     optimizer = BayesianOptimization(
         f=black_box_function,
         pbounds={
-            "Kp1": (0, 800),
-            "Kp2": (0, 800),
-            "Kp3": (0, 800),
-            "Ki1": (0, 800),
-            "Ki2": (0, 800),
-            "Ki3": (0, 800),
-            "Kd1": (0, 800),
-            "Kd2": (0, 800),
-            "Kd3": (0, 800),
+            "Kp": (0, 800),
+            "Ki": (0, 800),
+            "Kd": (0, 800),
         },
         random_state=42,
     )
 
-    optimizer.load_state("learning/PID_bayesian/PID_bayesian_optimization_state_9var.json")
+    # optimizer.load_state("learning/PID_bayesian/PID_bayesian_optimization_state_3var_gripper.json")
 
     optimizer.maximize(
-        init_points=20,
-        n_iter=800,
+        init_points=30,
+        n_iter=100,
     )
 
-    optimizer.save_state("learning/PID_bayesian/PID_bayesian_optimization_state_9var.json")
+    optimizer.save_state("learning/PID_bayesian/PID_bayesian_optimization_state_3var_gripper.json")
 
     print("Best PID gains found:")
     print(optimizer.max)

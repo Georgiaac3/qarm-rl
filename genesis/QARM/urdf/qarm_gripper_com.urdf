@@ -1,0 +1,593 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ###################################################################################################################
+    Note that all mass/inertial values are examples values only. They are not representative of the actual components.
+    ###################################################################################################################
+-->
+
+<robot name="QARM">
+  <!-- LINK : world -->
+  <link name="world"/>
+  <!-- JOINT world_base_joint : world -> base_link -->
+	<joint name="world_base_joint" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="world"/>
+        <child link="base_link"/>
+  </joint>
+  <!-- LINK : base_link -->
+  <link name="base_link">
+    <inertial>
+      <origin
+        xyz="0.000529200576288575 -2.23307396420992E-06 0.0267852902177001"
+        rpy="0 0 0" />
+      <mass
+        value="3.89847036294307" />
+      <inertia
+        ixx="0.0259717926187233"
+        ixy="7.41706820354147E-07"
+        ixz="-9.20327430275286E-08"
+        iyy="0.0237418182185852"
+        iyz="6.90408382921997E-11"
+        izz="0.048730018421969" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/base_link.stl"/>
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/base_link.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- JOINT YAW : base_link -> YAW -->
+  <joint
+    name="YAW"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="YAW" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-2.967"
+      upper="2.967"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <!-- LINK : YAW -->
+  <link
+    name="YAW">
+    <inertial>
+      <origin
+        xyz="9.37418676855843E-09 -3.48810780368004E-09 0.115813977186301"
+        rpy="0 0 0" />
+      <mass
+        value="0.701518504018672" />
+      <inertia
+        ixx="0.000478980181395404"
+        ixy="3.49149750193703E-12"
+        ixz="5.35348095946474E-11"
+        iyy="0.000450830880977554"
+        iyz="9.21997569253762E-11"
+        izz="0.000625067532631923" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/YAW.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/YAW.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- JOINT SHOULDER : YAW -> BICEP -->
+  <joint
+    name="SHOULDER"
+    type="revolute">
+    <origin
+      xyz="0 0 0.1397714"
+      rpy="-1.5707963267949 0 0" />
+    <parent
+      link="YAW" />
+    <child
+      link="BICEP" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.483"
+      upper="1.483"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <!-- LINK : BICEP -->
+  <link
+    name="BICEP">
+    <inertial>
+      <origin
+        xyz="0.0136584263393359 -0.234778864037209 -7.06001931450219E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.706073338310231" />
+      <inertia
+        ixx="0.00242444522090698"
+        ixy="2.42682372909241E-06"
+        ixz="-6.26703067273348E-07"
+        iyy="0.000274342515078279"
+        iyz="1.69726051287685E-06"
+        izz="0.00246773570290634" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/BICEP.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/BICEP.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- JOINT ELBOW : BICEP -> FOREARM -->
+  <joint
+    name="ELBOW"
+    type="revolute">
+    <origin
+      xyz="0.0500000000000004 -0.350000000000015 0"
+      rpy="0 0 -1.42889927219074" />
+    <parent
+      link="BICEP" />
+    <child
+      link="FOREARM" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.658"
+      upper="1.309"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <!-- LINK : FOREARM -->
+  <link
+    name="FOREARM">
+    <inertial>
+      <origin
+        xyz="0.0372712542033594 0.155357218514742 0.000271723941997439"
+        rpy="0 0 0" />
+      <mass
+        value="0.4296669212638" />
+      <inertia
+        ixx="0.000344487673462402"
+        ixy="-2.89506781372207E-05"
+        ixz="4.98141800994188E-07"
+        iyy="0.000149695456153606"
+        iyz="2.97325983931059E-06"
+        izz="0.000297718151262944" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/FOREARM.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/FOREARM.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- JOINT WRIST : FOREARM -> END_EFFECTOR -->
+  <joint
+    name="WRIST"
+    type="revolute">
+    <origin
+      xyz="0.0336611536380097 0.235607569369425 0"
+      rpy="-1.5707963267949 0 -0.141897054604159" />
+    <parent
+      link="FOREARM" />
+    <child
+      link="END_EFFECTOR" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.010"
+      upper="3.010"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <!-- LINK : END_EFFECTOR -->
+  <link
+    name="END_EFFECTOR">
+    <inertial>
+      <origin
+        xyz="-7.14013714436801E-05 -4.06287319420589E-05 0.0057237846257307"
+        rpy="0 0 0" />
+      <mass
+        value="0.025331269641348" />
+      <inertia
+        ixx="2.26806595610621E-06"
+        ixy="7.98741449900658E-09"
+        ixz="1.08626792635935E-08"
+        iyy="2.22929725748166E-06"
+        iyz="-5.49899749477752E-09"
+        izz="4.00602755679902E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/END_EFFECTOR.stl" />
+      </geometry>
+      <material
+        name="red">
+        <color
+          rgba="1 0 0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/END_EFFECTOR.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- JOINT GRIPPER_MOUNT : END_EFFECTOR -> END_EFFECTOR_BASE -->
+  <joint
+    name="GRIPPER_MOUNT"
+    type="fixed">
+    <parent link="END_EFFECTOR"/>
+    <child link="END_EFFECTOR_BASE"/>
+    <origin xyz="0 0 0.011997" rpy="0 0 0"/>
+  </joint>
+  <!-- LINK : END_EFFECTOR_BASE -->
+  <link
+    name="END_EFFECTOR_BASE">
+    <inertial>
+      <origin
+        xyz="-0.01934 0.000464 0.037427"
+        rpy="0 0 0" />
+      <mass
+        value="0.32859" />
+      <inertia
+        ixx="0.0003414103645109625"
+        ixy="0"
+        ixz="0"
+        iyy="0.00036593677400436004"
+        iyz="0"
+        izz="0.00038892330215876253" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/END_EFFECTOR_BASE.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.86667 0.86667 0.8902 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/END_EFFECTOR_BASE.stl" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- CAUTION : The whole gripper was reworked in blender : the axis of rotation for the fingers is along the x-axis (not the usual z-axis) -->
+
+  <!-- FINGER A -->
+  <!-- JOINT JOINT1A : END_EFFECTOR_BASE -> LINK1A -->
+  <joint
+    name="JOINT1A"
+    type="revolute">
+    <origin
+      xyz="0.01 0.03075 0.0399"
+      rpy="0 0 0" />
+    <parent
+      link="END_EFFECTOR_BASE" />
+    <child
+      link="LINK1A" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-0.9"
+      upper="0.9"
+      effort="10"
+      velocity="5" />
+  </joint>
+  <!-- LINk : LINK1A -->
+  <link
+    name="LINK1A">
+    <inertial>
+      <origin
+        xyz="-0.01 -0.001236 0.037"
+        rpy="0 0 0" />
+      <mass
+        value="0.075987" />
+      <inertia
+        ixx="6.580961783249998e-05"
+        ixy="0"
+        ixz="0"
+        iyy="6.888196220999998e-05"
+        iyz="0"
+        izz="1.15678176225e-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/LINK1A.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/LINK1A.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- JOINT JOINT2A : LINK1A -> LINK2A -->
+  <joint
+    name="JOINT2A"
+    type="revolute">
+    <origin
+      xyz="-0.000842 -0.000324 0.07"
+      rpy="0 0 0" />
+    <parent
+      link="LINK1A" />
+    <child
+      link="LINK2A" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+    lower="-0.9"
+    upper="0.9"
+    effort="10"
+    velocity="5" />
+  </joint>
+  <!-- LINK : LINK2A -->
+  <link
+    name="LINK2A">
+    <inertial>
+      <origin
+        xyz="-0.009 0.000305 0.023377"
+        rpy="0 0 0" />
+      <mass
+        value="0.0291073155718739" />
+      <inertia
+        ixx="9.680729317760608e-06"
+        ixy="0"
+        ixz="0"
+        iyy="9.48687459605193e-06"
+        iyz="0"
+        izz="2.394804388675925e-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/LINK2A.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/LINK2A.stl" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- FINGER B -->
+  <!-- JOINT JOINT1B : END_EFFECTOR_BASE -> LINK1B -->
+  <joint
+    name="JOINT1B"
+    type="revolute">
+    <origin
+      xyz="0.01 -0.03075 0.0399"
+      rpy="0 0 0" />
+    <parent
+      link="END_EFFECTOR_BASE" />
+    <child
+      link="LINK1B" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-0.9"
+      upper="0.9"
+      effort="10"
+      velocity="5" />
+  </joint>
+  <!-- LINK : LINK1B -->
+  <link
+    name="LINK1B">
+    <inertial>
+      <origin
+        xyz="-0.01 0.001236 0.037"
+        rpy="0 0 0" />
+      <mass
+        value="0.075987" />
+      <inertia
+        ixx="6.580961783249998e-05"
+        ixy="0"
+        ixz="0"
+        iyy="6.888196220999998e-05"
+        iyz="0"
+        izz="1.15678176225e-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/LINK1B.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/LINK1B.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- JOINT JOINT2B : LINK1B -> LINK2B -->
+  <joint
+    name="JOINT2B"
+    type="revolute">
+    <!-- todo 0.055781+1.5708=1.625 -->
+    <origin
+      xyz="-0.000842 0.000324 0.07"
+      rpy="0 0 0" />
+    <parent
+      link="LINK1B" />
+    <child
+      link="LINK2B" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-0.9"
+      upper="0.9"
+      effort="10"
+      velocity="5" />
+  </joint>
+  <!-- LINK : LINK2B -->
+  <link
+    name="LINK2B">
+    <inertial>
+      <origin
+        xyz="-0.009 -0.000305 0.023377"
+        rpy="0 0 0" />
+      <mass
+        value="0.0291073155718739" />
+      <inertia
+        ixx="9.680729317760608e-06"
+        ixy="0"
+        ixz="0"
+        iyy="9.48687459605193e-06"
+        iyz="0"
+        izz="2.394804388675925e-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/LINK2B.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/LINK2B.stl" />
+      </geometry>
+    </collision>
+  </link>
+</robot>
